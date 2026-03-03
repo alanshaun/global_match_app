@@ -1,48 +1,59 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, Copy, Download, ArrowLeft, FileText } from "lucide-react";
-import { useLocation } from "wouter";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Upload, X, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+interface FormData {
+  productPdfUrl: string;
+  productPdfKey: string;
+  targetCountries: string[];
+  numberOfCompanies: number;
+}
+
+interface ProgressUpdate {
+  stage: string;
+  progress: number;
+  message: string;
+  data?: any;
+}
 
 export default function Products() {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
-  const [step, setStep] = useState<"upload" | "results">("upload");
-  const [submissionId, setSubmissionId] = useState<number | null>(null);
-
-  // 表单状态
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     productPdfUrl: "",
     productPdfKey: "",
-    targetCountries: [] as string[],
+    targetCountries: [],
     numberOfCompanies: 10,
   });
-
   const [country, setCountry] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [submissionId, setSubmissionId] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState<ProgressUpdate | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // API 调用
   const submitProductMutation = trpc.products.submitProductPDF.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setSubmissionId(data.submissionId);
-      setStep("results");
-      toast.success("产品已提交，正在进行 AI 分析...");
+      toast.success("产品已提交，开始 AI 分析...");
+      // 开始监听进度
+      startProgressMonitoring(data.submissionId);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast.error(`提交失败: ${error.message}`);
     },
   });
 
-  const getMatchesQuery = trpc.products.getProductMatches.useQuery(
-    { submissionId: submissionId || 0 },
-    { enabled: submissionId !== null }
-  );
-
-  const [isUploading, setIsUploading] = useState(false);
+  const { data: matches, isLoading: isLoadingMatches } =
+    trpc.products.getProductMatches.useQuery(
+      { submissionId: submissionId || 0 },
+      { enabled: submissionId !== null && !isProcessing }
+    );
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,12 +66,10 @@ export default function Products() {
 
     try {
       setIsUploading(true);
-      
-      // 读取文件内容
+
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // 调用后端 API 上传到 S3
+
       const response = await fetch("/api/upload-pdf", {
         method: "POST",
         headers: {
@@ -87,17 +96,56 @@ export default function Products() {
 
       toast.success("产品 PDF 已上传");
     } catch (error) {
-      toast.error(`上传失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      toast.error(
+        `上传失败: ${error instanceof Error ? error.message : "未知错误"}`
+      );
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const startProgressMonitoring = (id: number) => {
+    setIsProcessing(true);
+    setProgress(null);
+
+    const eventSource = new EventSource(`/api/process-product/${id}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const update = JSON.parse(event.data) as ProgressUpdate;
+        setProgress(update);
+
+        if (update.stage === "completed" || update.stage === "error") {
+          eventSource.close();
+          setIsProcessing(false);
+
+          if (update.stage === "completed") {
+            toast.success("AI 分析完成！");
+            // 重新查询匹配结果
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            toast.error(update.message);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse progress update:", error);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      setIsProcessing(false);
+      toast.error("连接中断");
+    };
   };
 
   const handleAddCountry = () => {
     if (country.trim()) {
       setFormData({
         ...formData,
-        targetCountries: [...formData.targetCountries, country],
+        targetCountries: [...formData.targetCountries, country.trim()],
       });
       setCountry("");
     }
@@ -114,123 +162,123 @@ export default function Products() {
     e.preventDefault();
 
     if (!formData.productPdfUrl) {
-      toast.error("请上传产品 PDF");
+      toast.error("请先上传产品 PDF");
       return;
     }
 
-    submitProductMutation.mutate(formData);
+    submitProductMutation.mutate({
+      productPdfUrl: formData.productPdfUrl,
+      productPdfKey: formData.productPdfKey,
+      targetCountries:
+        formData.targetCountries.length > 0
+          ? formData.targetCountries
+          : undefined,
+      numberOfCompanies: formData.numberOfCompanies,
+    });
   };
 
-  const handleCopyEmail = (email: string) => {
-    navigator.clipboard.writeText(email);
-    toast.success("邮件已复制到剪贴板");
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (step === "upload") {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b">
-          <div className="container mx-auto px-4 py-4 flex items-center">
-            <button
-              onClick={() => navigate("/")}
-              className="mr-4 p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">产品客户匹配</h1>
-          </div>
-        </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          产品客户匹配
+        </h1>
+        <p className="text-gray-600 mb-8">
+          上传产品 PDF，AI 智能分析并匹配全球目标公司
+        </p>
 
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>上传产品 PDF</CardTitle>
-              <CardDescription>
-                上传您的产品 PDF 文件，我们将使用 AI 自动提取产品信息并为您匹配最合适的目标公司
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* 产品 PDF 上传 */}
-                <div className="space-y-2">
-                  <Label htmlFor="productPdf">产品 PDF 文件 *</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* 左侧：上传表单 */}
+          <div className="md:col-span-1">
+            <Card className="p-6 sticky top-8">
+              <h2 className="text-xl font-semibold mb-4">上传产品</h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* PDF 上传 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    产品 PDF
+                  </label>
+                  <div className="relative">
                     <input
-                      id="productPdf"
                       type="file"
                       accept=".pdf"
                       onChange={handleFileSelect}
+                      disabled={isUploading || submitProductMutation.isPending}
                       className="hidden"
+                      id="pdf-input"
                     />
-                    <label htmlFor="productPdf" className="cursor-pointer block">
-                      {formData.productPdfUrl ? (
-                        <div className="text-green-600">
-                          <FileText className="w-8 h-8 mx-auto mb-2" />
-                          <p className="font-semibold">✓ PDF 已上传</p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {formData.productPdfKey.split("/").pop()}
-                          </p>
-                        </div>
+                    <label
+                      htmlFor="pdf-input"
+                      className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 transition"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      ) : formData.productPdfUrl ? (
+                        <CheckCircle className="w-6 h-6 text-green-600" />
                       ) : (
-                        <div>
-                          <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                          <p className="font-semibold text-gray-700">
-                            点击上传或拖拽 PDF 文件
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            系统将自动提取产品名称、描述、规格等信息
-                          </p>
-                        </div>
+                        <Upload className="w-6 h-6 text-blue-600" />
                       )}
                     </label>
                   </div>
+                  {formData.productPdfUrl && (
+                    <p className="text-sm text-green-600 mt-2">✓ PDF 已上传</p>
+                  )}
                 </div>
 
                 {/* 目标国家 */}
-                <div className="space-y-2">
-                  <Label>目标国家/地区</Label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    目标国家/地区
+                  </label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="例如：美国、欧洲、日本"
+                      type="text"
+                      placeholder="如: USA, UK"
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCountry();
+                        }
+                      }}
                     />
                     <Button
                       type="button"
-                      variant="outline"
                       onClick={handleAddCountry}
+                      variant="outline"
                     >
                       添加
                     </Button>
                   </div>
-                  {formData.targetCountries.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.targetCountries.map((c, index) => (
-                        <div
-                          key={index}
-                          className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.targetCountries.map((c, i) => (
+                      <Badge key={i} variant="secondary">
+                        {c}
+                        <button
+                          onClick={() => handleRemoveCountry(i)}
+                          className="ml-1 hover:text-red-600"
                         >
-                          {c}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCountry(index)}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
 
                 {/* 公司数量 */}
-                <div className="space-y-2">
-                  <Label htmlFor="numberOfCompanies">
-                    期望匹配公司数量: {formData.numberOfCompanies}
-                  </Label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    匹配公司数量: {formData.numberOfCompanies}
+                  </label>
                   <input
-                    id="numberOfCompanies"
                     type="range"
                     min="1"
                     max="50"
@@ -249,166 +297,164 @@ export default function Products() {
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={submitProductMutation.isPending || !formData.productPdfUrl || isUploading}
+                  disabled={
+                    submitProductMutation.isPending ||
+                    !formData.productPdfUrl ||
+                    isUploading ||
+                    isProcessing
+                  }
                 >
-                  {submitProductMutation.isPending ? (
+                  {submitProductMutation.isPending || isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      提交中...
+                      处理中...
                     </>
                   ) : (
-                    "提交产品"
+                    "开始匹配"
                   )}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // 结果页面
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center">
-          <button
-            onClick={() => setStep("upload")}
-            className="mr-4 p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">匹配结果</h1>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
-        {getMatchesQuery.isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </Card>
           </div>
-        ) : getMatchesQuery.error ? (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <p className="text-red-800">加载失败: {getMatchesQuery.error.message}</p>
-            </CardContent>
-          </Card>
-        ) : getMatchesQuery.data?.matches && getMatchesQuery.data.matches.length > 0 ? (
-          <div className="space-y-4">
-            {getMatchesQuery.data.matches.map((match, index) => (
-              <Card key={match.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-blue-600">
-                          #{index + 1}
-                        </span>
-                        <CardTitle>{match.companyName}</CardTitle>
-                      </div>
-                      <CardDescription className="mt-1">
-                        {match.companyDescription}
-                      </CardDescription>
+
+          {/* 右侧：进度和结果 */}
+          <div className="md:col-span-2 space-y-6">
+            {/* 进度条 */}
+            {isProcessing && progress && (
+              <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <h3 className="text-lg font-semibold mb-4">处理进度</h3>
+
+                <div className="space-y-4">
+                  {/* 进度条 */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {progress.message}
+                      </span>
+                      <span className="text-sm font-semibold text-blue-600">
+                        {progress.progress}%
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-blue-600">
-                        {Math.round(parseFloat(match.matchScore || "0"))}%
-                      </div>
-                      <p className="text-sm text-gray-600">匹配度</p>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${progress.progress}%` }}
+                      />
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* 联系信息 */}
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {match.contactEmail && (
-                      <div>
-                        <p className="text-sm text-gray-600">邮箱</p>
-                        <p className="font-mono text-sm">{match.contactEmail}</p>
-                      </div>
-                    )}
-                    {match.contactPhone && (
-                      <div>
-                        <p className="text-sm text-gray-600">电话</p>
-                        <p className="font-mono text-sm">{match.contactPhone}</p>
-                      </div>
-                    )}
-                    {match.companyWebsite && (
-                      <div>
-                        <p className="text-sm text-gray-600">官网</p>
-                        <a
-                          href={match.companyWebsite}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          访问
-                        </a>
-                      </div>
-                    )}
-                    {match.companyLinkedin && (
-                      <div>
-                        <p className="text-sm text-gray-600">LinkedIn</p>
-                        <a
-                          href={match.companyLinkedin}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          访问
-                        </a>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Cold Email */}
-                  {match.coldEmail && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="font-semibold text-sm">Cold Email</p>
-                        <Button
-                          size="sm"
-                          variant="outline"
+                  {/* 阶段信息 */}
+                  <div className="text-sm text-gray-600">
+                    <p>当前阶段: {progress.stage}</p>
+                    {progress.data && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        {JSON.stringify(progress.data).substring(0, 100)}...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* 匹配结果 */}
+            {!isProcessing && matches?.matches && matches.matches.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">匹配结果</h3>
+                {matches.matches.map((match) => (
+                  <Card key={match.id} className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-lg font-semibold">
+                          {match.companyName}
+                        </h4>
+                        <Badge className="mt-2">
+                          匹配度: {match.matchScore}%
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-4 text-sm">
+                      {match.companyWebsite && (
+                        <div>
+                          <p className="text-gray-600">官网</p>
+                          <a
+                            href={match.companyWebsite}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline break-all"
+                          >
+                            {match.companyWebsite}
+                          </a>
+                        </div>
+                      )}
+                      {match.contactEmail && (
+                        <div>
+                          <p className="text-gray-600">邮箱</p>
+                          <div className="flex items-center gap-2">
+                            <span>{match.contactEmail}</span>
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  match.contactEmail || "",
+                                  `email-${match.id}`
+                                )
+                              }
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              {copiedId === `email-${match.id}` ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cold Email */}
+                    {match.coldEmail && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm font-semibold mb-2">Cold Email</p>
+                        <p className="text-sm font-medium mb-2">
+                          主题: {match.coldEmail.subject}
+                        </p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
+                          {match.coldEmail.emailBody}
+                        </p>
+                        <button
                           onClick={() =>
-                            handleCopyEmail(
-                              `主题: ${match.coldEmail.subject}\n\n${match.coldEmail.emailBody}`
+                            copyToClipboard(
+                              `${match.coldEmail.subject}\n\n${match.coldEmail.emailBody}`,
+                              `email-${match.id}`
                             )
                           }
+                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
                         >
-                          <Copy className="w-4 h-4 mr-1" />
-                          复制
-                        </Button>
+                          <Copy className="w-4 h-4" />
+                          复制邮件
+                        </button>
                       </div>
-                      <p className="text-sm font-semibold text-gray-800 mb-2">
-                        {match.coldEmail.subject}
-                      </p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {match.coldEmail.emailBody}
-                      </p>
-                    </div>
-                  )}
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                  {/* 匹配原因 */}
-                  {match.matchReason && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-sm text-blue-900">
-                        <span className="font-semibold">匹配原因：</span>
-                        {match.matchReason}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
+            {/* 空状态 */}
+            {!isProcessing && !matches?.matches?.length && submissionId && (
+              <Card className="p-12 text-center">
+                <p className="text-gray-600">暂无匹配结果</p>
               </Card>
-            ))}
+            )}
+
+            {!submissionId && !isProcessing && (
+              <Card className="p-12 text-center">
+                <p className="text-gray-600">上传产品 PDF 开始匹配</p>
+              </Card>
+            )}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-gray-600">暂无匹配结果</p>
-            </CardContent>
-          </Card>
-        )}
+        </div>
       </div>
     </div>
   );
