@@ -42,6 +42,8 @@ export default function Products() {
     { enabled: submissionId !== null }
   );
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -51,18 +53,44 @@ export default function Products() {
       return;
     }
 
-    // 这里应该上传文件到 S3 并获取 URL 和 key
-    // 目前使用模拟数据
-    const mockUrl = `https://example.com/product-${Date.now()}.pdf`;
-    const mockKey = `products/${user?.id}/${file.name}`;
+    try {
+      setIsUploading(true);
+      
+      // 读取文件内容
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // 调用后端 API 上传到 S3
+      const response = await fetch("/api/upload-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileData: Array.from(uint8Array),
+          fileType: "product",
+        }),
+      });
 
-    setFormData({
-      ...formData,
-      productPdfUrl: mockUrl,
-      productPdfKey: mockKey,
-    });
+      if (!response.ok) {
+        throw new Error("上传失败");
+      }
 
-    toast.success("产品 PDF 已上传");
+      const uploadResult = await response.json();
+
+      setFormData({
+        ...formData,
+        productPdfUrl: uploadResult.url,
+        productPdfKey: uploadResult.key,
+      });
+
+      toast.success("产品 PDF 已上传");
+    } catch (error) {
+      toast.error(`上传失败: ${error instanceof Error ? error.message : "未知错误"}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleAddCountry = () => {
@@ -221,7 +249,7 @@ export default function Products() {
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={submitProductMutation.isPending || !formData.productPdfUrl}
+                  disabled={submitProductMutation.isPending || !formData.productPdfUrl || isUploading}
                 >
                   {submitProductMutation.isPending ? (
                     <>
