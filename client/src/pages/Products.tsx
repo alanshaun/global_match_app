@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, X, Copy, CheckCircle } from "lucide-react";
+import { Loader2, Upload, X, Copy, CheckCircle, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -22,6 +22,38 @@ interface ProgressUpdate {
   data?: any;
 }
 
+interface Contact {
+  name: string;
+  title: string;
+  department: string;
+  linkedinUrl?: string;
+  relevanceScore: number;
+  reason: string;
+  coldEmail?: {
+    subject: string;
+    emailBody: string;
+    language: string;
+  };
+}
+
+interface CompanyMatch {
+  company: {
+    name: string;
+    website: string;
+    linkedin: string;
+    description: string;
+    employees: number;
+    industry: string;
+  };
+  verification: {
+    isQualified: boolean;
+    score: number;
+    reasons: string[];
+    warnings: string[];
+  };
+  contacts: Contact[];
+}
+
 export default function Products() {
   const { user } = useAuth();
   const [formData, setFormData] = useState<FormData>({
@@ -35,25 +67,21 @@ export default function Products() {
   const [submissionId, setSubmissionId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<ProgressUpdate | null>(null);
+  const [companiesWithContacts, setCompaniesWithContacts] = useState<
+    CompanyMatch[]
+  >([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const submitProductMutation = trpc.products.submitProductPDF.useMutation({
     onSuccess: (data) => {
       setSubmissionId(data.submissionId);
       toast.success("产品已提交，开始 AI 分析...");
-      // 开始监听进度
       startProgressMonitoring(data.submissionId);
     },
     onError: (error) => {
       toast.error(`提交失败: ${error.message}`);
     },
   });
-
-  const { data: matches, isLoading: isLoadingMatches } =
-    trpc.products.getProductMatches.useQuery(
-      { submissionId: submissionId || 0 },
-      { enabled: submissionId !== null && !isProcessing }
-    );
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -107,6 +135,7 @@ export default function Products() {
   const startProgressMonitoring = (id: number) => {
     setIsProcessing(true);
     setProgress(null);
+    setCompaniesWithContacts([]);
 
     const eventSource = new EventSource(`/api/process-product/${id}`);
 
@@ -119,10 +148,10 @@ export default function Products() {
           eventSource.close();
           setIsProcessing(false);
 
-          if (update.stage === "completed") {
+          if (update.stage === "completed" && update.data?.companiesWithContacts) {
+            setCompaniesWithContacts(update.data.companiesWithContacts);
             toast.success("AI 分析完成！");
-            // 不自动刷新，直接显示结果
-          } else {
+          } else if (update.stage === "error") {
             toast.error(update.message);
           }
         }
@@ -182,15 +211,15 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
           产品客户匹配
         </h1>
         <p className="text-gray-600 mb-8">
-          上传产品 PDF，AI 智能分析并匹配全球目标公司
+          上传产品 PDF，AI 智能分析并匹配全球优质买家
         </p>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-4 gap-8">
           {/* 左侧：上传表单 */}
           <div className="md:col-span-1">
             <Card className="p-6 sticky top-8">
@@ -315,14 +344,13 @@ export default function Products() {
           </div>
 
           {/* 右侧：进度和结果 */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="md:col-span-3 space-y-6">
             {/* 进度条 */}
             {isProcessing && progress && (
               <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <h3 className="text-lg font-semibold mb-4">处理进度</h3>
 
                 <div className="space-y-4">
-                  {/* 进度条 */}
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">
@@ -339,107 +367,149 @@ export default function Products() {
                       />
                     </div>
                   </div>
-
-                  {/* 阶段信息 */}
-                  <div className="text-sm text-gray-600">
-                    <p>当前阶段: {progress.stage}</p>
-                    {progress.data && (
-                      <p className="mt-2 text-xs text-gray-500">
-                        {JSON.stringify(progress.data).substring(0, 100)}...
-                      </p>
-                    )}
-                  </div>
                 </div>
               </Card>
             )}
 
             {/* 匹配结果 */}
-            {!isProcessing && matches?.matches && matches.matches.length > 0 && (
+            {!isProcessing && companiesWithContacts.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">匹配结果</h3>
-                {matches.matches.map((match) => (
-                  <Card key={match.id} className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold">
-                          {match.companyName}
-                        </h4>
-                        <Badge className="mt-2">
-                          匹配度: {match.matchScore}%
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4 mb-4 text-sm">
-                      {match.companyWebsite && (
+                <h3 className="text-lg font-semibold">
+                  匹配结果 ({companiesWithContacts.length} 家公司)
+                </h3>
+                {companiesWithContacts.map((match, idx) => (
+                  <Card key={idx} className="p-6">
+                    {/* 公司信息 */}
+                    <div className="mb-6">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="text-gray-600">官网</p>
+                          <h4 className="text-lg font-semibold">
+                            {match.company.name}
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {match.company.industry} · {match.company.employees} 员工
+                          </p>
+                        </div>
+                        <Badge>匹配度: {match.verification.score}%</Badge>
+                      </div>
+
+                      <p className="text-sm text-gray-700 mb-3">
+                        {match.company.description}
+                      </p>
+
+                      <div className="flex flex-wrap gap-3">
+                        {match.company.website && (
                           <a
-                            href={match.companyWebsite}
+                            href={match.company.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline break-all"
+                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
                           >
-                            {match.companyWebsite}
+                            官网 <ExternalLink className="w-3 h-3" />
                           </a>
-                        </div>
-                      )}
-                      {match.contactEmail && (
-                        <div>
-                          <p className="text-gray-600">邮箱</p>
-                          <div className="flex items-center gap-2">
-                            <span>{match.contactEmail}</span>
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  match.contactEmail || "",
-                                  `email-${match.id}`
-                                )
-                              }
-                              className="text-blue-600 hover:text-blue-800"
-                            >
-                              {copiedId === `email-${match.id}` ? (
-                                <CheckCircle className="w-4 h-4" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                        )}
+                        {match.company.linkedin && (
+                          <a
+                            href={match.company.linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            LinkedIn <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Cold Email */}
-                    {match.coldEmail && (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-sm font-semibold mb-2">Cold Email</p>
-                        <p className="text-sm font-medium mb-2">
-                          主题: {match.coldEmail.subject}
-                        </p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
-                          {match.coldEmail.emailBody}
-                        </p>
-                        <button
-                          onClick={() =>
-                            copyToClipboard(
-                              `${match.coldEmail.subject}\n\n${match.coldEmail.emailBody}`,
-                              `email-${match.id}`
-                            )
-                          }
-                          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                        >
-                          <Copy className="w-4 h-4" />
-                          复制邮件
-                        </button>
+                    {/* 联系人列表 */}
+                    <div className="border-t pt-6">
+                      <h5 className="font-semibold mb-4">关键联系人</h5>
+                      <div className="space-y-4">
+                        {match.contacts.map((contact, cIdx) => (
+                          <div
+                            key={cIdx}
+                            className="bg-gray-50 p-4 rounded-lg space-y-3"
+                          >
+                            {/* 联系人基本信息 */}
+                            <div>
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <p className="font-semibold">{contact.name}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {contact.title} · {contact.department}
+                                  </p>
+                                </div>
+                                <Badge variant="outline">
+                                  相关度: {contact.relevanceScore}%
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-700">
+                                {contact.reason}
+                              </p>
+                            </div>
+
+                            {/* LinkedIn 链接 */}
+                            {contact.linkedinUrl && (
+                              <a
+                                href={contact.linkedinUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                              >
+                                LinkedIn 个人资料{" "}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+
+                            {/* Cold Email */}
+                            {contact.coldEmail && (
+                              <div className="bg-white p-3 rounded border border-gray-200">
+                                <p className="text-xs font-semibold text-gray-600 mb-2">
+                                  邮件主题:
+                                </p>
+                                <p className="text-sm font-medium mb-3">
+                                  {contact.coldEmail?.subject}
+                                </p>
+                                <p className="text-xs font-semibold text-gray-600 mb-2">
+                                  邮件内容:
+                                </p>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
+                                  {contact.coldEmail?.emailBody}
+                                </p>
+                                <button
+                                  onClick={() =>
+                                    copyToClipboard(
+                                      `${contact.coldEmail?.subject}\n\n${contact.coldEmail?.emailBody}`,
+                                      `email-${idx}-${cIdx}`
+                                    )
+                                  }
+                                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                >
+                                  {copiedId === `email-${idx}-${cIdx}` ? (
+                                    <>
+                                      <CheckCircle className="w-4 h-4" />
+                                      已复制
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4" />
+                                      复制邮件
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    )}
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
 
             {/* 空状态 */}
-            {!isProcessing && !matches?.matches?.length && submissionId && (
+            {!isProcessing && companiesWithContacts.length === 0 && submissionId && (
               <Card className="p-12 text-center">
                 <p className="text-gray-600">暂无匹配结果</p>
               </Card>
