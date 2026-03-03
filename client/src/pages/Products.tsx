@@ -4,9 +4,8 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Copy, Download, ArrowLeft } from "lucide-react";
+import { Loader2, Copy, Download, ArrowLeft, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -18,25 +17,22 @@ export default function Products() {
 
   // 表单状态
   const [formData, setFormData] = useState({
-    productName: "",
-    productDescription: "",
-    productCategory: "",
-    productImageUrls: [] as string[],
+    productPdfUrl: "",
+    productPdfKey: "",
     targetCountries: [] as string[],
     numberOfCompanies: 10,
   });
 
-  const [imageUrl, setImageUrl] = useState("");
   const [country, setCountry] = useState("");
 
   // API 调用
-  const submitProductMutation = trpc.products.submitProduct.useMutation({
-    onSuccess: (data) => {
+  const submitProductMutation = trpc.products.submitProductPDF.useMutation({
+    onSuccess: (data: any) => {
       setSubmissionId(data.submissionId);
       setStep("results");
       toast.success("产品已提交，正在进行 AI 分析...");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`提交失败: ${error.message}`);
     },
   });
@@ -46,14 +42,27 @@ export default function Products() {
     { enabled: submissionId !== null }
   );
 
-  const handleAddImage = () => {
-    if (imageUrl.trim()) {
-      setFormData({
-        ...formData,
-        productImageUrls: [...formData.productImageUrls, imageUrl],
-      });
-      setImageUrl("");
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".pdf")) {
+      toast.error("请上传 PDF 文件");
+      return;
     }
+
+    // 这里应该上传文件到 S3 并获取 URL 和 key
+    // 目前使用模拟数据
+    const mockUrl = `https://example.com/product-${Date.now()}.pdf`;
+    const mockKey = `products/${user?.id}/${file.name}`;
+
+    setFormData({
+      ...formData,
+      productPdfUrl: mockUrl,
+      productPdfKey: mockKey,
+    });
+
+    toast.success("产品 PDF 已上传");
   };
 
   const handleAddCountry = () => {
@@ -66,13 +75,6 @@ export default function Products() {
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setFormData({
-      ...formData,
-      productImageUrls: formData.productImageUrls.filter((_, i) => i !== index),
-    });
-  };
-
   const handleRemoveCountry = (index: number) => {
     setFormData({
       ...formData,
@@ -83,8 +85,8 @@ export default function Products() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.productName.trim() || !formData.productDescription.trim()) {
-      toast.error("请填写产品名称和描述");
+    if (!formData.productPdfUrl) {
+      toast.error("请上传产品 PDF");
       return;
     }
 
@@ -114,89 +116,46 @@ export default function Products() {
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Card>
             <CardHeader>
-              <CardTitle>上传产品信息</CardTitle>
+              <CardTitle>上传产品 PDF</CardTitle>
               <CardDescription>
-                请填写您的产品详情，我们将使用 AI 为您匹配最合适的目标公司
+                上传您的产品 PDF 文件，我们将使用 AI 自动提取产品信息并为您匹配最合适的目标公司
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* 产品名称 */}
+                {/* 产品 PDF 上传 */}
                 <div className="space-y-2">
-                  <Label htmlFor="productName">产品名称 *</Label>
-                  <Input
-                    id="productName"
-                    placeholder="例如：智能家居控制系统"
-                    value={formData.productName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, productName: e.target.value })
-                    }
-                  />
-                </div>
-
-                {/* 产品描述 */}
-                <div className="space-y-2">
-                  <Label htmlFor="productDescription">产品描述 *</Label>
-                  <Textarea
-                    id="productDescription"
-                    placeholder="详细描述您的产品功能、特点和优势..."
-                    rows={4}
-                    value={formData.productDescription}
-                    onChange={(e) =>
-                      setFormData({ ...formData, productDescription: e.target.value })
-                    }
-                  />
-                </div>
-
-                {/* 产品类别 */}
-                <div className="space-y-2">
-                  <Label htmlFor="productCategory">产品类别</Label>
-                  <Input
-                    id="productCategory"
-                    placeholder="例如：电子产品、家居用品等"
-                    value={formData.productCategory}
-                    onChange={(e) =>
-                      setFormData({ ...formData, productCategory: e.target.value })
-                    }
-                  />
-                </div>
-
-                {/* 产品图片 */}
-                <div className="space-y-2">
-                  <Label>产品图片 URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="输入图片 URL"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
+                  <Label htmlFor="productPdf">产品 PDF 文件 *</Label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                    <input
+                      id="productPdf"
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileSelect}
+                      className="hidden"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddImage}
-                    >
-                      添加
-                    </Button>
-                  </div>
-                  {formData.productImageUrls.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.productImageUrls.map((url, index) => (
-                        <div
-                          key={index}
-                          className="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                        >
-                          <span className="truncate max-w-xs">{url}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImage(index)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            ✕
-                          </button>
+                    <label htmlFor="productPdf" className="cursor-pointer block">
+                      {formData.productPdfUrl ? (
+                        <div className="text-green-600">
+                          <FileText className="w-8 h-8 mx-auto mb-2" />
+                          <p className="font-semibold">✓ PDF 已上传</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {formData.productPdfKey.split("/").pop()}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ) : (
+                        <div>
+                          <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <p className="font-semibold text-gray-700">
+                            点击上传或拖拽 PDF 文件
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            系统将自动提取产品名称、描述、规格等信息
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
                 </div>
 
                 {/* 目标国家 */}
@@ -262,7 +221,7 @@ export default function Products() {
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={submitProductMutation.isPending}
+                  disabled={submitProductMutation.isPending || !formData.productPdfUrl}
                 >
                   {submitProductMutation.isPending ? (
                     <>

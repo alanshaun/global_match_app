@@ -31,26 +31,25 @@ describe("Products Router", () => {
     caller = productsRouter.createCaller(mockContext);
   });
 
-  describe("submitProduct", () => {
-    it("should successfully submit a product with valid data", async () => {
-      const result = await caller.submitProduct({
-        productName: "Test Product",
-        productDescription: "A test product description",
-        productCategory: "Electronics",
+  describe("submitProductPDF", () => {
+    it("should successfully submit a product PDF with valid data", async () => {
+      const result = await caller.submitProductPDF({
+        productPdfUrl: "https://example.com/product.pdf",
+        productPdfKey: "products/user1/product.pdf",
         numberOfCompanies: 10,
       });
 
       expect(result).toBeDefined();
-      expect(result.status).toBe("pending");
+      expect(result.status).toBe("analyzing");
       expect(result.submissionId).toBeDefined();
-      expect(result.message).toContain("AI 分析");
+      expect(result.message).toContain("提取");
     });
 
-    it("should reject submission without product name", async () => {
+    it("should reject submission without PDF URL", async () => {
       try {
-        await caller.submitProduct({
-          productName: "",
-          productDescription: "A test product description",
+        await caller.submitProductPDF({
+          productPdfUrl: "",
+          productPdfKey: "products/user1/product.pdf",
         });
         expect.fail("Should have thrown an error");
       } catch (error) {
@@ -58,45 +57,31 @@ describe("Products Router", () => {
       }
     });
 
-    it("should reject submission without product description", async () => {
-      try {
-        await caller.submitProduct({
-          productName: "Test Product",
-          productDescription: "",
-        });
-        expect.fail("Should have thrown an error");
-      } catch (error) {
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should accept optional fields", async () => {
-      const result = await caller.submitProduct({
-        productName: "Test Product",
-        productDescription: "A test product description",
-        productCategory: "Electronics",
-        productImageUrls: ["https://example.com/image.jpg"],
+    it("should accept optional target countries", async () => {
+      const result = await caller.submitProductPDF({
+        productPdfUrl: "https://example.com/product.pdf",
+        productPdfKey: "products/user1/product.pdf",
         targetCountries: ["USA", "UK"],
         numberOfCompanies: 5,
       });
 
       expect(result).toBeDefined();
-      expect(result.status).toBe("pending");
+      expect(result.status).toBe("analyzing");
     });
 
     it("should respect numberOfCompanies range", async () => {
       // Test minimum
-      const minResult = await caller.submitProduct({
-        productName: "Test",
-        productDescription: "Test",
+      const minResult = await caller.submitProductPDF({
+        productPdfUrl: "https://example.com/product.pdf",
+        productPdfKey: "products/user1/product.pdf",
         numberOfCompanies: 1,
       });
       expect(minResult).toBeDefined();
 
       // Test maximum
-      const maxResult = await caller.submitProduct({
-        productName: "Test",
-        productDescription: "Test",
+      const maxResult = await caller.submitProductPDF({
+        productPdfUrl: "https://example.com/product.pdf",
+        productPdfKey: "products/user1/product.pdf",
         numberOfCompanies: 50,
       });
       expect(maxResult).toBeDefined();
