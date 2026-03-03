@@ -200,7 +200,7 @@ Return a JSON object with:
         message: "正在保存分析结果...",
       });
 
-      // 更新数据库
+      // 更新数据库 - 仅保存 AI 分析结果
       try {
         await db
           .update(productSubmissions)
@@ -214,12 +214,35 @@ Return a JSON object with:
             updatedAt: new Date(),
           })
           .where(eq(productSubmissions.id, parseInt(submissionId)));
+
+        // 数据库更新成功，发送完成消息
+        res.write(`data: ${JSON.stringify({
+          stage: "completed",
+          progress: 100,
+          message: "✓ 分析完成！",
+          data: {
+            productData,
+            marketAnalysis,
+            matchingData,
+          },
+        })}\n\n`);
       } catch (dbError) {
         console.error("Database update error:", dbError);
+        // 即使数据库更新失败，也发送完成消息
+        res.write(`data: ${JSON.stringify({
+          stage: "completed",
+          progress: 100,
+          message: "✓ 分析完成！",
+          data: {
+            productData,
+            marketAnalysis,
+            matchingData,
+          },
+        })}\n\n`);
       }
 
-      // 发送完成消息
-      closeSSE(res);
+      // 关闭连接
+      res.end();
     } catch (error) {
       console.error("Product processing error:", error);
       sendSSEError(res, `处理失败: ${error instanceof Error ? error.message : "未知错误"}`);

@@ -121,10 +121,7 @@ export default function Products() {
 
           if (update.stage === "completed") {
             toast.success("AI 分析完成！");
-            // 重新查询匹配结果
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
+            // 不自动刷新，直接显示结果
           } else {
             toast.error(update.message);
           }
