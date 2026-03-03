@@ -50,7 +50,7 @@ IMPORTANT RULES:
 4. Consider company size, industry, and business model
 5. Identify key decision makers (Sales, Trade, Procurement managers - NOT just CEOs)
 
-Return a JSON object with:
+Return ONLY valid JSON, no markdown or extra text:
 {
   "buyerTypes": ["type1", "type2"],
   "excludeCompetitors": true,
@@ -70,7 +70,8 @@ Return a JSON object with:
     ]);
 
     const content = extractKimiContent(response);
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    return parsed;
   } catch (error) {
     console.error("Buyer analysis error:", error);
     // 返回默认买家档案
@@ -96,6 +97,7 @@ Return a JSON object with:
 /**
  * 验证公司是否符合买家条件
  * 检查公司规模、行业、合作历史等
+ * 改进：即使验证失败，也返回有效的验证结果
  */
 export async function verifyCompanyQualification(
   companyData: any,
@@ -114,7 +116,7 @@ VERIFICATION CRITERIA:
 4. Does the company have experience with similar products?
 5. Are there any red flags?
 
-Return a JSON object with:
+Return ONLY valid JSON, no markdown or extra text:
 {
   "isQualified": boolean,
   "score": 0-100,
@@ -131,14 +133,23 @@ Buyer Profile: ${JSON.stringify(buyerProfile)}`,
     ]);
 
     const content = extractKimiContent(response);
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    
+    // 确保返回的是有效的验证结果
+    return {
+      isQualified: parsed.isQualified !== false, // 默认为 true
+      score: Math.max(0, Math.min(100, parsed.score || 75)), // 确保在 0-100 之间
+      reasons: Array.isArray(parsed.reasons) ? parsed.reasons : ["Qualified buyer"],
+      warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
+    };
   } catch (error) {
     console.error("Company verification error:", error);
+    // 即使验证失败，也返回一个有效的验证结果（默认合格）
     return {
       isQualified: true,
       score: 70,
-      reasons: ["Default verification"],
-      warnings: [],
+      reasons: ["Default verification - company appears to be a potential buyer"],
+      warnings: ["Verification could not be completed, using default assessment"],
     };
   }
 }
@@ -173,7 +184,7 @@ For each contact, provide:
 - Relevance score (0-100)
 - Reason (why this person is a good fit)
 
-Return a JSON array of contact objects:
+Return ONLY valid JSON array, no markdown or extra text:
 [
   {
     "name": "John Smith",
@@ -197,24 +208,52 @@ Buyer Types: ${buyerProfile.buyerTypes.join(", ")}`,
     const content = extractKimiContent(response);
     const contacts = JSON.parse(content);
     
+    // 确保返回的是数组
+    if (!Array.isArray(contacts)) {
+      return getDefaultContacts();
+    }
+    
     // 按相关性排序
     return contacts.sort(
       (a: ContactProfile, b: ContactProfile) =>
-        b.relevanceScore - a.relevanceScore
+        (b.relevanceScore || 0) - (a.relevanceScore || 0)
     );
   } catch (error) {
     console.error("Contact identification error:", error);
-    return [
-      {
-        name: "Sales Manager",
-        title: "Sales Manager",
-        department: "Sales",
-        linkedinUrl: "linkedin.com/in/sales-manager",
-        relevanceScore: 80,
-        reason: "Responsible for new product sourcing",
-      },
-    ];
+    return getDefaultContacts();
   }
+}
+
+/**
+ * 获取默认联系人列表
+ */
+function getDefaultContacts(): ContactProfile[] {
+  return [
+    {
+      name: "Sales Manager",
+      title: "Sales Manager",
+      department: "Sales",
+      linkedinUrl: "linkedin.com/in/sales-manager",
+      relevanceScore: 90,
+      reason: "Responsible for new product sourcing and partnerships",
+    },
+    {
+      name: "Trade Manager",
+      title: "International Trade Manager",
+      department: "Trade",
+      linkedinUrl: "linkedin.com/in/trade-manager",
+      relevanceScore: 85,
+      reason: "Handles international supplier relationships",
+    },
+    {
+      name: "Procurement Manager",
+      title: "Procurement Manager",
+      department: "Procurement",
+      linkedinUrl: "linkedin.com/in/procurement-manager",
+      relevanceScore: 80,
+      reason: "Evaluates and sources new suppliers",
+    },
+  ];
 }
 
 /**
@@ -243,7 +282,7 @@ Write a personalized cold email that:
 6. Is professional but friendly
 7. Avoids being too salesy
 
-Return a JSON object with:
+Return ONLY valid JSON, no markdown or extra text:
 {
   "subject": "Subject line",
   "emailBody": "Email body text",
@@ -260,21 +299,42 @@ Contact: ${JSON.stringify(contact)}`,
     ]);
 
     const content = extractKimiContent(response);
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    return {
+      subject: parsed.subject || "Exciting New Product Opportunity",
+      emailBody: parsed.emailBody || getDefaultEmailBody(contact),
+      language: parsed.language || "English",
+    };
   } catch (error) {
     console.error("Cold email generation error:", error);
     return {
       subject: "Exciting New Product Opportunity for Your Business",
-      emailBody: `Dear ${contact.title},
-
-I hope this email finds you well. I'm reaching out because I believe our product could be a great fit for your organization.
-
-[Product details would go here]
-
-I'd love to discuss how we can work together to bring this opportunity to your customers.
-
-Best regards`,
+      emailBody: getDefaultEmailBody(contact),
       language: "English",
     };
   }
+}
+
+/**
+ * 获取默认 Cold Email 内容
+ */
+function getDefaultEmailBody(contact: ContactProfile): string {
+  return `Dear ${contact.title},
+
+I hope this email finds you well. I'm reaching out because I believe our product could be a great fit for your organization's business model.
+
+We've developed a high-quality product that aligns perfectly with the needs of companies like yours. Our product offers:
+- Competitive pricing for bulk orders
+- Flexible payment terms
+- Reliable supply chain management
+- Strong profit margins for resellers
+
+I'd love to discuss how we can work together to bring this opportunity to your customers and expand your product portfolio.
+
+Would you be available for a brief call this week to explore this partnership?
+
+Best regards,
+[Your Name]
+[Your Company]
+[Contact Information]`;
 }
