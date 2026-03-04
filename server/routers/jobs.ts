@@ -261,7 +261,7 @@ async function parseResumeAndSearchJobs(
     // 5. 计算匹配度并创建职位匹配记录
     for (const job of jobListings) {
       try {
-        const matchScore = calculateJobMatchScore(job, parsedData, input);
+        const matchScore = await calculateJobMatchScore(job, parsedData, input);
 
         // 仅保存匹配度 > 60 的职位
         if (matchScore >= 60) {
@@ -323,94 +323,179 @@ async function searchJobsFromMultiplePlatforms(
   country: string,
   searchKeywords: any
 ): Promise<any[]> {
-  // 这里应该集成真实的职位搜索 API（Indeed、LinkedIn、Boss 等）
-  // 目前返回模拟数据
-  const mockJobs = [
-    {
-      title: `${position} - Senior Level`,
-      company: "Tech Company A",
-      location: `${city}, ${country}`,
-      city,
-      country,
-      description: "We are looking for a talented professional...",
-      requirements: "5+ years of experience required",
-      salaryMin: 80000,
-      salaryMax: 120000,
-      salaryCurrency: "USD",
-      url: "https://example.com/job/1",
-      source: "indeed",
-      publishedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-      companyWebsite: "https://techcompanya.com",
-    },
-    {
-      title: `${position} - Mid Level`,
-      company: "Tech Company B",
-      location: `${city}, ${country}`,
-      city,
-      country,
-      description: "Join our growing team...",
-      requirements: "3+ years of experience",
-      salaryMin: 60000,
-      salaryMax: 90000,
-      salaryCurrency: "USD",
-      url: "https://example.com/job/2",
-      source: "linkedin",
-      publishedDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
-      companyWebsite: "https://techcompanyb.com",
-    },
-  ];
+  try {
+    // 导入爬虫模块
+    const { aggregateJobs } = await import("../scrapers/jobScraper");
 
-  return mockJobs;
+    // 确定国家代码
+    const countryCode = country?.toUpperCase() === "CN" ? "CN" : "US";
+
+    // 使用真实爬虫获取职位
+    const jobs = await aggregateJobs(
+      position,
+      city,
+      countryCode as "US" | "CN",
+      20 // 获取 20 个职位
+    );
+
+    // 转换爬虫数据格式
+    return jobs.map((job: any) => ({
+      title: job.title,
+      company: job.company,
+      location: `${city}, ${country}`,
+      city,
+      country,
+      description: job.description,
+      requirements: job.description, // 使用描述作为要求
+      salaryMin: extractSalaryMin(job.salary),
+      salaryMax: extractSalaryMax(job.salary),
+      salaryCurrency: country?.toUpperCase() === "CN" ? "CNY" : "USD",
+      url: job.url, // 真实链接
+      source: job.source,
+      publishedDate: job.postedDate ? new Date(job.postedDate) : new Date(),
+      companyWebsite: extractWebsite(job.company),
+    }));
+  } catch (error) {
+    console.error("Error searching jobs from platforms:", error);
+    return [];
+  }
 }
 
 /**
- * 计算职位匹配度
+ * 从薪资字符串提取最小值
  */
-function calculateJobMatchScore(job: any, resumeData: any, input: any): number {
-  let score = 50; // 基础分
+function extractSalaryMin(salary: string | undefined): number | undefined {
+  if (!salary) return undefined;
+  const match = salary.match(/\d+/);
+  return match ? parseInt(match[0]) * 1000 : undefined; // 假设单位是 K
+}
 
-  // 技能匹配
-  const resumeSkills = resumeData.skills || [];
-  const jobRequirements = job.requirements || "";
-  const matchedSkills = resumeSkills.filter((skill: string) =>
-    jobRequirements.toLowerCase().includes(skill.toLowerCase())
-  );
-  score += (matchedSkills.length / resumeSkills.length) * 30;
-
-  // 工作经验匹配
-  if (resumeData.yearsOfExperience >= 5) {
-    score += 10;
+/**
+ * 从薪资字符串提取最大值
+ */
+function extractSalaryMax(salary: string | undefined): number | undefined {
+  if (!salary) return undefined;
+  const parts = salary.split(/[-~]/); // 分割范围
+  if (parts.length > 1) {
+    const match = parts[1].match(/\d+/);
+    return match ? parseInt(match[0]) * 1000 : undefined;
   }
+  return undefined;
+}
 
-  // 薪资匹配
-  if (input.salaryMin && input.salaryMax) {
-    const jobSalaryMid = ((job.salaryMin || 0) + (job.salaryMax || 0)) / 2;
-    const expectedSalaryMid = (input.salaryMin + input.salaryMax) / 2;
-    if (Math.abs(jobSalaryMid - expectedSalaryMid) < expectedSalaryMid * 0.3) {
-      score += 10;
+/**
+ * 从公司名称提取网站
+ */
+function extractWebsite(company: string): string | undefined {
+  // 尝试从公司名称构建网站 URL
+  if (!company) return undefined;
+  const domain = company
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/g, "");
+  return domain ? `https://${domain}.com` : undefined;
+}
+
+/**
+ * 计算职位匹配度（使用 AI）
+ */
+async function calculateJobMatchScore(job: any, resumeData: any, input: any): Promise<number> {
+  try {
+    // 使用 AI 计算真实匹配度
+    const matchPrompt = `
+    基于以下简历和职位信息，计算匹配度（0-100）：
+    
+    简历信息：
+    - 技能: ${resumeData.skills?.join(", ") || "未指定"}
+    - 工作经验: ${resumeData.experience || "未指定"}
+    - 教育背景: ${resumeData.education || "未指定"}
+    - 工作年限: ${resumeData.yearsOfExperience || "未指定"}
+    - 成就: ${resumeData.keyAchievements?.join(", ") || "未指定"}
+    
+    职位信息：
+    - 职位名称: ${job.title}
+    - 公司: ${job.company}
+    - 职位描述: ${job.description}
+    - 职位要求: ${job.requirements}
+    - 薪资范围: ${job.salaryMin}-${job.salaryMax} ${job.salaryCurrency}
+    
+    用户期望：
+    - 目标岗位: ${input.targetPosition}
+    - 期望薪资: ${input.salaryMin}-${input.salaryMax} ${input.salaryCurrency}
+    
+    请返回 JSON 格式：
+    {
+      "matchScore": 75,
+      "reason": "匹配原因说明"
     }
-  }
+    
+    匹配度计算考虑因素：
+    1. 技能匹配度（40%）
+    2. 工作经验匹配度（30%）
+    3. 薪资匹配度（20%）
+    4. 职位类型匹配度（10%）
+    `;
 
-  return Math.min(100, Math.max(0, score));
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: "You are a job matching expert. Calculate match score between resume and job posting. Return valid JSON.",
+        },
+        {
+          role: "user",
+          content: matchPrompt,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "job_match_score",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              matchScore: { type: "number", minimum: 0, maximum: 100 },
+              reason: { type: "string" },
+            },
+            required: ["matchScore", "reason"],
+          },
+        },
+      },
+    });
+
+    try {
+      const content = typeof response.choices[0]?.message.content === "string"
+        ? response.choices[0].message.content
+        : "{}";
+      const result = JSON.parse(content);
+      return Math.min(100, Math.max(0, result.matchScore || 50));
+    } catch (e) {
+      console.error("Failed to parse match score:", e);
+      return 50; // 默认分数
+    }
+  } catch (error) {
+    console.error("Error calculating match score:", error);
+    return 50; // 默认分数
+  }
 }
 
 /**
  * 生成匹配原因
  */
 function generateMatchReason(job: any, resumeData: any): string {
-  const reasons = [];
-
-  if (resumeData.yearsOfExperience >= 5) {
-    reasons.push("丰富的工作经验");
-  }
-
-  if (resumeData.skills && resumeData.skills.length > 0) {
-    reasons.push("具备所需技能");
-  }
-
-  if (resumeData.education) {
-    reasons.push("教育背景匹配");
-  }
-
-  return reasons.join("，") || "职位与简历相关";
+  // 这个函数现在由 AI 在 calculateJobMatchScore 中生成
+  return "基于 AI 分析的匹配原因";
 }
+
+/**
+ * 生成简单的匹配原因（备用）
+ */
+function generateSimpleMatchReason(job: any, resumeData: any): string {
+  const skills = resumeData.skills || [];
+  const jobDesc = job.requirements || "";
+  const matchedCount = skills.filter((s: string) => jobDesc.toLowerCase().includes(s.toLowerCase())).length;
+  return `匹配 ${matchedCount}/${skills.length} 个技能要求`;
+}
+
+
