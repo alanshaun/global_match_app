@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { productsRouter } from "./routers/products";
 import { jobsRouter } from "./routers/jobs";
 import { subscriptionsRouter } from "./routers/subscriptions";
+import { adminRouter } from "./routers/admin";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -28,6 +29,9 @@ export const appRouter = router({
 
   // 邮件订阅路由
   subscriptions: subscriptionsRouter,
+
+  // 管理员路由
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;
