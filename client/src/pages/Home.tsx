@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { SmartMatchLogo } from "@/components/SmartMatchLogo";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowRight, Briefcase, FileText, Home as HomeIcon, Sparkles, Globe, ChevronRight } from "lucide-react";
+import { ArrowRight, Globe, ChevronDown, Sparkles } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
@@ -33,10 +33,10 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-white">
         {/* 导航栏 */}
-        <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
-          <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+        <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100">
+          <div className="container mx-auto px-6 py-4 flex justify-between items-center max-w-7xl">
             <div className="flex items-center gap-3">
               <SmartMatchLogo className="w-8 h-8" />
               <span className="text-2xl font-bold text-gray-900">
@@ -44,10 +44,18 @@ export default function Home() {
               </span>
             </div>
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-gray-600 hover:text-gray-900 transition">Features</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-gray-900 transition">How It Works</a>
-              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition">Pricing</a>
-              <a href="#contact" className="text-gray-600 hover:text-gray-900 transition">Contact</a>
+              <div className="relative group">
+                <button className="text-gray-700 hover:text-gray-900 transition flex items-center gap-1">
+                  About <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="relative group">
+                <button className="text-gray-700 hover:text-gray-900 transition flex items-center gap-1">
+                  Features <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
+              <a href="#" className="text-gray-700 hover:text-gray-900 transition">Resources</a>
+              <a href="#" className="text-gray-700 hover:text-gray-900 transition">Pricing</a>
             </div>
             <div className="flex items-center gap-4">
               <button
@@ -58,175 +66,234 @@ export default function Home() {
                 {language === "en" ? "中文" : "EN"}
               </button>
               <a href={getLoginUrl()}>
-                <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50">
+                <Button variant="ghost" className="text-gray-900 hover:bg-gray-100">
                   {t("nav.login")}
                 </Button>
               </a>
               <a href={getLoginUrl()}>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white border-0">
-                  Start Free
+                <Button className="bg-black hover:bg-gray-900 text-white border-0 rounded-full px-6">
+                  Apply
                 </Button>
               </a>
             </div>
           </div>
         </nav>
 
-        {/* Hero Section */}
-        <section className="py-20 px-6 bg-gradient-to-b from-blue-50 to-white">
+        {/* Hero Section - 中心标题布局 */}
+        <section className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+          {/* 背景装饰 */}
+          <div className="absolute top-20 right-10 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-8 left-10 w-72 h-72 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+          <div className="relative z-10 text-center max-w-4xl">
+            {/* 小标签 */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-8">
+              <Sparkles className="w-4 h-4" />
+              {language === "en" ? "AI-Powered Matching" : "AI 驱动的智能匹配"}
+            </div>
+
+            {/* 主标题 */}
+            <h1 className="text-6xl md:text-7xl font-serif text-gray-900 mb-6 leading-tight">
+              {language === "en" 
+                ? "SmartMatch turns seekers into finders"
+                : "SmartMatch 将寻求者变成发现者"
+              }
+            </h1>
+
+            {/* 副标题和引用 */}
+            <div className="mb-12">
+              <p className="text-xl md:text-2xl text-gray-600 italic mb-6 leading-relaxed">
+                {language === "en"
+                  ? "\"Find what you're looking for, regardless of where it is in the world.\""
+                  : "\"找到你要找的东西，无论它在世界的哪个角落。\""
+                }
+              </p>
+              <p className="text-gray-500">
+                {language === "en" ? "— SmartMatch Team" : "— SmartMatch 团队"}
+              </p>
+            </div>
+
+            {/* CTA 按钮 */}
+            <div className="flex gap-4 justify-center mb-12">
+              <a href={getLoginUrl()}>
+                <Button className="bg-black hover:bg-gray-900 text-white border-0 rounded-full px-8 py-6 text-lg">
+                  {language === "en" ? "Get Started" : "开始使用"} <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </a>
+              <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50 rounded-full px-8 py-6 text-lg">
+                {language === "en" ? "Watch Demo" : "观看演示"}
+              </Button>
+            </div>
+
+            {/* 下方提示 */}
+            <p className="text-sm text-gray-500">
+              {language === "en" 
+                ? "✓ No credit card required • ✓ Free forever plan • ✓ 24/7 support"
+                : "✓ 无需信用卡 • ✓ 永久免费计划 • ✓ 24/7 支持"
+              }
+            </p>
+          </div>
+
+          {/* 向下滚动指示 */}
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <ChevronDown className="w-6 h-6 text-gray-400" />
+          </div>
+        </section>
+
+        {/* 动态内容区域 - 演示 */}
+        <section className="py-20 px-6 bg-white">
           <div className="container mx-auto max-w-6xl">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-medium mb-6">
-                  <Sparkles className="w-4 h-4" />
-                  AI-Powered Intelligent Matching
-                </div>
-                <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                  Find Your Perfect Match
-                </h1>
-                <p className="text-xl text-gray-600 mb-8">
-                  SmartMatch uses advanced AI to intelligently match you with global opportunities - whether you're looking for buyers, jobs, or investment properties.
-                </p>
-                <div className="flex gap-4">
-                  <a href={getLoginUrl()}>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white border-0 px-8 py-6 text-lg">
-                      Get Started Free <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
-                  </a>
-                  <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50 px-8 py-6 text-lg">
-                    Watch Demo
-                  </Button>
-                </div>
-                <p className="text-sm text-gray-500 mt-6">✓ No credit card required • ✓ Free forever plan • ✓ 24/7 support</p>
-              </div>
-              <div className="relative h-96 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <Sparkles className="w-12 h-12 text-white" />
+                <h2 className="text-4xl font-bold text-gray-900 mb-6">
+                  {language === "en" ? "How It Works" : "工作原理"}
+                </h2>
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-lg font-bold text-blue-600">1</span>
                     </div>
-                    <p className="text-gray-600">Interactive Demo</p>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {language === "en" ? "Upload Your Info" : "上传您的信息"}
+                      </h3>
+                      <p className="text-gray-600">
+                        {language === "en" 
+                          ? "Share your product, resume, or property details with our platform."
+                          : "与我们的平台分享您的产品、简历或房产详情。"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-lg font-bold text-blue-600">2</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {language === "en" ? "AI Analysis" : "AI 分析"}
+                      </h3>
+                      <p className="text-gray-600">
+                        {language === "en"
+                          ? "Our advanced AI analyzes your information and searches globally."
+                          : "我们先进的 AI 分析您的信息并进行全球搜索。"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-lg font-bold text-blue-600">3</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {language === "en" ? "Get Results" : "获取结果"}
+                      </h3>
+                      <p className="text-gray-600">
+                        {language === "en"
+                          ? "Receive ranked matches with contact info and outreach templates."
+                          : "获得排名的匹配结果，包括联系信息和外联模板。"
+                        }
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
+              <div className="relative h-96 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl overflow-hidden flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-24 h-24 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center animate-pulse">
+                    <Sparkles className="w-12 h-12 text-white" />
+                  </div>
+                  <p className="text-gray-600 text-lg font-medium">
+                    {language === "en" ? "Interactive Demo" : "交互式演示"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="py-20 px-6 bg-white">
+        {/* 特性预览 */}
+        <section className="py-20 px-6 bg-gray-50">
           <div className="container mx-auto max-w-6xl">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Three Powerful Features</h2>
-              <p className="text-xl text-gray-600">Everything you need to find opportunities worldwide</p>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                {language === "en" ? "Three Powerful Features" : "三大强大功能"}
+              </h2>
+              <p className="text-xl text-gray-600">
+                {language === "en"
+                  ? "Everything you need to find opportunities worldwide"
+                  : "找到全球机会所需的一切"
+                }
+              </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {/* Feature 1 */}
-              <div
-                className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => setActiveFeature(0)}
-              >
+              <div className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-                  <Briefcase className="w-6 h-6 text-blue-600" />
+                  <span className="text-2xl">🏢</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Product Buyer Matching</h3>
-                <p className="text-gray-600 mb-6">
-                  Upload your product, and AI intelligently matches you with global buyers, distributors, and partners. Get contact information and personalized cold emails.
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {language === "en" ? "Product Matching" : "产品匹配"}
+                </h3>
+                <p className="text-gray-600">
+                  {language === "en"
+                    ? "Find global buyers and partners for your products."
+                    : "为您的产品找到全球买家和合作伙伴。"
+                  }
                 </p>
-                <a href="#" className="text-blue-600 font-medium flex items-center gap-2 hover:gap-3 transition">
-                  Learn more <ChevronRight className="w-4 h-4" />
-                </a>
               </div>
 
-              {/* Feature 2 */}
-              <div
-                className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => setActiveFeature(1)}
-              >
+              <div className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-                  <FileText className="w-6 h-6 text-blue-600" />
+                  <span className="text-2xl">💼</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Job Auto Search</h3>
-                <p className="text-gray-600 mb-6">
-                  Upload your resume and search criteria. AI finds matching jobs from global platforms with real links and company information.
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {language === "en" ? "Job Search" : "职位搜索"}
+                </h3>
+                <p className="text-gray-600">
+                  {language === "en"
+                    ? "Discover your ideal job from global platforms."
+                    : "从全球平台发现您理想的工作。"
+                  }
                 </p>
-                <a href="#" className="text-blue-600 font-medium flex items-center gap-2 hover:gap-3 transition">
-                  Learn more <ChevronRight className="w-4 h-4" />
-                </a>
               </div>
 
-              {/* Feature 3 */}
-              <div
-                className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
-                onClick={() => setActiveFeature(2)}
-              >
+              <div className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-                  <HomeIcon className="w-6 h-6 text-blue-600" />
+                  <span className="text-2xl">🏠</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Real Estate Investment</h3>
-                <p className="text-gray-600 mb-6">
-                  Find investment properties or buyers worldwide. AI analyzes your criteria and matches you with opportunities from global platforms.
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {language === "en" ? "Real Estate" : "房产投资"}
+                </h3>
+                <p className="text-gray-600">
+                  {language === "en"
+                    ? "Find investment properties or buyers worldwide."
+                    : "在全球范围内寻找投资房产或买家。"
+                  }
                 </p>
-                <a href="#" className="text-blue-600 font-medium flex items-center gap-2 hover:gap-3 transition">
-                  Learn more <ChevronRight className="w-4 h-4" />
-                </a>
               </div>
             </div>
           </div>
         </section>
 
-        {/* How It Works Section */}
-        <section id="how-it-works" className="py-20 px-6 bg-gray-50">
-          <div className="container mx-auto max-w-6xl">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
-              <p className="text-xl text-gray-600">Three simple steps to find your opportunities</p>
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                  1
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Upload Your Info</h3>
-                <p className="text-gray-600">
-                  Share your product, resume, or property requirements. Support for documents, images, and text descriptions.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                  2
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">AI Analysis</h3>
-                <p className="text-gray-600">
-                  Our advanced AI analyzes your information and searches global platforms for matches in real-time.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                  3
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Get Results</h3>
-                <p className="text-gray-600">
-                  Receive ranked matches with contact information, links, and AI-generated outreach messages.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* CTA Section */}
         <section className="py-20 px-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="container mx-auto max-w-4xl text-center">
-            <h2 className="text-4xl font-bold mb-6">Ready to Find Your Perfect Match?</h2>
+            <h2 className="text-4xl font-bold mb-6">
+              {language === "en" ? "Ready to Find Your Match?" : "准备好找到您的匹配了吗？"}
+            </h2>
             <p className="text-xl mb-8 text-blue-100">
-              Join thousands of users who are already finding opportunities with SmartMatch
+              {language === "en"
+                ? "Join thousands of users finding opportunities worldwide"
+                : "加入数千名在全球寻找机会的用户"
+              }
             </p>
             <a href={getLoginUrl()}>
-              <Button className="bg-white text-blue-600 hover:bg-gray-100 border-0 px-8 py-6 text-lg font-semibold">
-                Start Free Today <ArrowRight className="w-5 h-5 ml-2" />
+              <Button className="bg-white text-blue-600 hover:bg-gray-100 border-0 rounded-full px-8 py-6 text-lg font-semibold">
+                {language === "en" ? "Start Free Today" : "立即免费开始"} <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </a>
           </div>
@@ -241,35 +308,46 @@ export default function Home() {
                   <SmartMatchLogo className="w-6 h-6" />
                   <span className="font-bold text-white">SmartMatch</span>
                 </div>
-                <p className="text-sm">AI-powered intelligent matching platform</p>
+                <p className="text-sm">
+                  {language === "en"
+                    ? "AI-powered intelligent matching platform"
+                    : "AI 驱动的智能匹配平台"
+                  }
+                </p>
               </div>
               <div>
-                <h4 className="font-semibold text-white mb-4">Product</h4>
+                <h4 className="font-semibold text-white mb-4">
+                  {language === "en" ? "Product" : "产品"}
+                </h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white transition">Features</a></li>
-                  <li><a href="#" className="hover:text-white transition">Pricing</a></li>
-                  <li><a href="#" className="hover:text-white transition">Security</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Features" : "功能"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Pricing" : "定价"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Security" : "安全"}</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-white mb-4">Company</h4>
+                <h4 className="font-semibold text-white mb-4">
+                  {language === "en" ? "Company" : "公司"}
+                </h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white transition">About</a></li>
-                  <li><a href="#" className="hover:text-white transition">Blog</a></li>
-                  <li><a href="#" className="hover:text-white transition">Contact</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "About" : "关于"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Blog" : "博客"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Contact" : "联系"}</a></li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-white mb-4">Legal</h4>
+                <h4 className="font-semibold text-white mb-4">
+                  {language === "en" ? "Legal" : "法律"}
+                </h4>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="#" className="hover:text-white transition">Privacy</a></li>
-                  <li><a href="#" className="hover:text-white transition">Terms</a></li>
-                  <li><a href="#" className="hover:text-white transition">Cookies</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Privacy" : "隐私"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Terms" : "条款"}</a></li>
+                  <li><a href="#" className="hover:text-white transition">{language === "en" ? "Cookies" : "Cookie"}</a></li>
                 </ul>
               </div>
             </div>
             <div className="border-t border-gray-800 pt-8 text-center text-sm">
-              <p>&copy; 2026 SmartMatch. All rights reserved.</p>
+              <p>&copy; 2026 SmartMatch. {language === "en" ? "All rights reserved." : "版权所有。"}</p>
             </div>
           </div>
         </footer>
@@ -277,12 +355,12 @@ export default function Home() {
     );
   }
 
-  // Authenticated user dashboard
+  // Authenticated user - 简单的仪表板
   return (
     <div className="min-h-screen bg-white">
       {/* 导航栏 */}
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center max-w-7xl">
           <div className="flex items-center gap-3">
             <SmartMatchLogo className="w-8 h-8" />
             <span className="text-2xl font-bold text-gray-900">
@@ -298,65 +376,79 @@ export default function Home() {
               {language === "en" ? "中文" : "EN"}
             </button>
             <div className="text-sm text-gray-600">
-              Welcome, {user?.name || "User"}
+              {language === "en" ? "Welcome" : "欢迎"}, {user?.name || "User"}
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Dashboard */}
+      {/* 仪表板 */}
       <div className="container mx-auto px-6 py-12 max-w-6xl">
-        <h2 className="text-3xl font-bold text-gray-900 mb-12">Select a Feature</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-12">
+          {language === "en" ? "Select a Feature" : "选择功能"}
+        </h2>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Feature 1 */}
           <div
-            className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
+            className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
             onClick={() => navigate("/products")}
           >
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-              <Briefcase className="w-6 h-6 text-blue-600" />
+              <span className="text-2xl">🏢</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Product Buyer Matching</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              {language === "en" ? "Product Matching" : "产品匹配"}
+            </h3>
             <p className="text-gray-600 mb-6">
-              Upload your product and find global buyers, distributors, and partners.
+              {language === "en"
+                ? "Find global buyers and partners for your products."
+                : "为您的产品找到全球买家和合作伙伴。"
+              }
             </p>
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0">
-              Enter <ArrowRight className="w-4 h-4 ml-2" />
+              {language === "en" ? "Enter" : "进入"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
 
-          {/* Feature 2 */}
           <div
-            className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
+            className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
             onClick={() => navigate("/jobs")}
           >
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-              <FileText className="w-6 h-6 text-blue-600" />
+              <span className="text-2xl">💼</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Job Auto Search</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              {language === "en" ? "Job Search" : "职位搜索"}
+            </h3>
             <p className="text-gray-600 mb-6">
-              Upload your resume and find matching jobs worldwide.
+              {language === "en"
+                ? "Discover your ideal job from global platforms."
+                : "从全球平台发现您理想的工作。"
+              }
             </p>
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0">
-              Enter <ArrowRight className="w-4 h-4 ml-2" />
+              {language === "en" ? "Enter" : "进入"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
 
-          {/* Feature 3 */}
           <div
-            className="p-8 rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer"
+            className="p-8 rounded-xl bg-white border border-gray-200 hover:shadow-lg transition-all cursor-pointer"
             onClick={() => navigate("/properties")}
           >
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-6">
-              <HomeIcon className="w-6 h-6 text-blue-600" />
+              <span className="text-2xl">🏠</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Real Estate Investment</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              {language === "en" ? "Real Estate" : "房产投资"}
+            </h3>
             <p className="text-gray-600 mb-6">
-              Find investment properties or buyers worldwide.
+              {language === "en"
+                ? "Find investment properties or buyers worldwide."
+                : "在全球范围内寻找投资房产或买家。"
+              }
             </p>
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0">
-              Enter <ArrowRight className="w-4 h-4 ml-2" />
+              {language === "en" ? "Enter" : "进入"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </div>
