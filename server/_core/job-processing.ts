@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { searchJobsUnified } from "../ai-job-search-unified";
+import { analyzeResume, calculateMatchScore } from "../resume-analyzer";
 
 interface JobSearchProgress {
   stage: string;
@@ -19,6 +20,7 @@ interface GeneratedJob {
   link: string;
   source: string;
   matchScore: number;
+  postedDate?: string;
 }
 
 function sendProgress(
@@ -76,9 +78,10 @@ async function searchRealJobs(
       currency: targetCountry === "CN" ? "CNY" : "USD",
       description: job.description,
       publishedDate: job.postedDate ? new Date(job.postedDate) : new Date(),
-      link: job.url, // 真实链接
+      link: job.url,
       source: job.source,
-      matchScore: 0, // 稍后计算
+      matchScore: 0,
+      postedDate: job.postedDate,
     }));
   } catch (error) {
     console.error("Error searching real jobs:", error);
@@ -86,85 +89,18 @@ async function searchRealJobs(
   }
 }
 
-/**
- * 计算职位匹配度
- */
-function calculateMatchScore(
-  job: GeneratedJob,
-  targetPosition: string,
-  targetCity: string,
-  salaryMin: number,
-  salaryMax: number
-): number {
-  let score = 50;
-
-  // 职位名称匹配（最多 30 分）
-  const titleLower = job.title.toLowerCase();
-  const positionLower = targetPosition.toLowerCase();
-
-  if (titleLower.includes(positionLower) || positionLower.includes(titleLower)) {
-    score += 30;
-  } else if (
-    titleLower.includes(positionLower.split(" ")[0]) ||
-    positionLower.includes(titleLower.split(" ")[0])
-  ) {
-    score += 15;
-  }
-
-  // 地点匹配（最多 20 分）
-  const locationLower = job.location.toLowerCase();
-  const cityLower = targetCity.toLowerCase();
-
-  if (
-    locationLower.includes(cityLower) ||
-    cityLower.includes(locationLower)
-  ) {
-    score += 20;
-  }
-
-  // 薪资范围匹配（最多 20 分）
-  if (job.salary && job.salary !== "未公开") {
-    try {
-      const salaryParts = job.salary.split(/[-~]/);
-      if (salaryParts.length >= 2) {
-        const jobSalaryMin = parseInt(
-          salaryParts[0].replace(/[^0-9]/g, "")
-        );
-        const jobSalaryMax = parseInt(
-          salaryParts[1].replace(/[^0-9]/g, "")
-        );
-
-        if (
-          jobSalaryMin >= salaryMin &&
-          jobSalaryMax <= salaryMax
-        ) {
-          score += 20;
-        } else if (
-          jobSalaryMin <= salaryMax &&
-          jobSalaryMax >= salaryMin
-        ) {
-          score += 10;
-        }
-      }
-    } catch (e) {
-      // 薪资解析失败，跳过薪资匹配
-    }
-  }
-
-  return Math.min(score, 100);
-}
-
 export async function handleJobProcessing(req: Request, res: Response) {
   const submissionId = parseInt(req.params.id);
-  const targetPosition = (req.query.targetPosition as string) || "Product Manager";
-  const targetCity = (req.query.targetCity as string) || "New York";
+  const resumeText = (req.query.resumeText as string) || "";
+  const targetPosition = (req.query.targetPosition as string) || undefined;
+  const targetCity = (req.query.targetCity as string) || undefined;
   const targetCountry = (req.query.targetCountry as string) || "US";
   const salaryMin = req.query.salaryMin
     ? parseInt(req.query.salaryMin as string)
-    : 50000;
+    : undefined;
   const salaryMax = req.query.salaryMax
     ? parseInt(req.query.salaryMax as string)
-    : 200000;
+    : undefined;
   const salaryCurrency = (req.query.salaryCurrency as string) || "USD";
   const jobCount = req.query.jobCount
     ? parseInt(req.query.jobCount as string)
@@ -176,66 +112,97 @@ export async function handleJobProcessing(req: Request, res: Response) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   try {
-    // 阶段 1: 简历解析
-    sendProgress(res, "parsing", 20, "正在解析简历信息...", null);
+    // 阶段 1: 使用 AI 分析简历
+    sendProgress(
+      res,
+      "parsing",
+      20,
+      "正在使用 AI 分析简历信息...",
+      null
+    );
+
+    const resumeAnalysis = await analyzeResume(
+      resumeText,
+      targetPosition,
+      targetCity,
+      targetCountry,
+      salaryMin,
+      salaryMax,
+      salaryCurrency
+    );
+
+    console.log(
+      `[Job Processing] Resume analysis complete:`,
+      {
+        position: resumeAnalysis.targetPosition,
+        location: resumeAnalysis.targetLocation,
+        skills: resumeAnalysis.skills.length,
+      }
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 阶段 2: 职位搜索（使用 Kimi AI）
+    // 阶段 2: 根据简历分析结果搜索职位
     sendProgress(
       res,
       "searching",
       50,
-      `正在使用 AI 搜索 ${targetPosition} 职位 (${targetCity})...`,
+      `正在根据简历搜索 ${resumeAnalysis.targetPosition} 职位 (${resumeAnalysis.targetLocation})...`,
       null
     );
 
-    // 使用 Kimi AI 搜索真实职位
+    // 使用简历分析结果搜索真实职位
     const jobs = await searchRealJobs(
-      targetPosition,
-      targetCity,
+      resumeAnalysis.targetPosition,
+      resumeAnalysis.targetLocation,
       jobCount,
-      targetCountry
+      resumeAnalysis.targetCountry
     );
 
-    console.log(`[Job Processing] Got ${jobs.length} jobs from Kimi AI`);
+    console.log(`[Job Processing] Got ${jobs.length} jobs from search`);
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
-    // 阶段 3: 匹配度计算
-    sendProgress(res, "matching", 75, "正在计算匹配度...", null);
+    // 阶段 3: 使用 AI 计算真实匹配度
+    sendProgress(res, "matching", 75, "正在使用 AI 计算匹配度...", null);
 
-    // 计算每个职位的匹配度
-    const jobsWithScores = jobs.map((job) => ({
-      ...job,
-      matchScore: calculateMatchScore(
-        job,
-        targetPosition,
-        targetCity,
-        salaryMin,
-        salaryMax
-      ),
-    }));
+    // 使用 AI 计算每个职位的真实匹配度
+    const jobsWithScores = await Promise.all(
+      jobs.map(async (job) => ({
+        ...job,
+        matchScore: await calculateMatchScore(
+          resumeAnalysis,
+          job.title,
+          job.description,
+          job.location
+        ),
+      }))
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 按匹配度排序，限制数量（移除时间限制，接受所有职位）
+    // 过滤半年内的职位，按匹配度排序，限制数量
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
     console.log(
       `[Job Processing] Before filtering: ${jobsWithScores.length} jobs with scores`
     );
-    
+
     const filteredJobs = jobsWithScores
+      .filter((job) => {
+        const jobDate = job.postedDate ? new Date(job.postedDate) : new Date();
+        return jobDate > sixMonthsAgo;
+      })
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, jobCount);
 
     console.log(
-      `[Job Processing] After filtering: ${filteredJobs.length} jobs returned`
+      `[Job Processing] After filtering: ${filteredJobs.length} jobs returned (within 6 months)`
     );
-    
+
     // 如果没有职位，添加调试信息
     if (filteredJobs.length === 0) {
       console.warn(
-        `[Job Processing] WARNING: No jobs returned! Original count: ${jobsWithScores.length}`
+        `[Job Processing] WARNING: No jobs found within 6 months! Original count: ${jobsWithScores.length}`
       );
     }
 
@@ -243,12 +210,14 @@ export async function handleJobProcessing(req: Request, res: Response) {
     sendProgress(res, "completed", 100, "职位搜索完成！", {
       jobMatches: filteredJobs,
       totalCount: filteredJobs.length,
+      resumeAnalysis: {
+        position: resumeAnalysis.targetPosition,
+        location: resumeAnalysis.targetLocation,
+        skills: resumeAnalysis.skills,
+        yearsOfExperience: resumeAnalysis.yearsOfExperience,
+      },
       searchParams: {
-        targetPosition,
-        targetCity,
         targetCountry,
-        salaryMin,
-        salaryMax,
         salaryCurrency,
       },
     });
