@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `job_search_subscriptions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`searchName` varchar(255) NOT NULL,\n\t`targetPosition` varchar(255) NOT NULL,\n\t`targetCity` varchar(100) NOT NULL,\n\t`targetCountry` varchar(100) DEFAULT 'US',\n\t`salaryMin` int,\n\t`salaryMax` int,\n\t`salaryCurrency` varchar(10) DEFAULT 'USD',\n\t`minMatchScore` int DEFAULT 70,\n\t`isActive` boolean DEFAULT true,\n\t`lastNotificationSent` timestamp,\n\t`notificationFrequency` enum('daily','weekly','immediately') DEFAULT 'daily',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `job_search_subscriptions_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3YQj7uLkGu4EnQU.eaf51ee7d28b --database YX66aCBXWR7kw3XuoMDswL --execute CREATE TABLE `job_search_subscriptions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`searchName` varchar(255) NOT NULL,\n\t`targetPosition` varchar(255) NOT NULL,\n\t`targetCity` varchar(100) NOT NULL,\n\t`targetCountry` varchar(100) DEFAULT 'US',\n\t`salaryMin` int,\n\t`salaryMax` int,\n\t`salaryCurrency` varchar(10) DEFAULT 'USD',\n\t`minMatchScore` int DEFAULT 70,\n\t`isActive` boolean DEFAULT true,\n\t`lastNotificationSent` timestamp,\n\t`notificationFrequency` enum('daily','weekly','immediately') DEFAULT 'daily',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `job_search_subscriptions_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 460
+}

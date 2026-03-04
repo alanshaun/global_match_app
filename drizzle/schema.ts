@@ -236,3 +236,29 @@ export const emailSubscriptions = mysqlTable("email_subscriptions", {
 
 export type EmailSubscription = typeof emailSubscriptions.$inferSelect;
 export type InsertEmailSubscription = typeof emailSubscriptions.$inferInsert;
+
+/**
+ * Job Search Subscriptions Table
+ * Store user subscriptions to specific job searches
+ * Allows users to receive email notifications when new jobs match their search criteria
+ */
+export const jobSearchSubscriptions = mysqlTable("job_search_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  searchName: varchar("searchName", { length: 255 }).notNull(), // 搜索名称（如"Senior Developer in SF"）
+  targetPosition: varchar("targetPosition", { length: 255 }).notNull(),
+  targetCity: varchar("targetCity", { length: 100 }).notNull(),
+  targetCountry: varchar("targetCountry", { length: 100 }).default("US"),
+  salaryMin: int("salaryMin"),
+  salaryMax: int("salaryMax"),
+  salaryCurrency: varchar("salaryCurrency", { length: 10 }).default("USD"),
+  minMatchScore: int("minMatchScore").default(70), // 最低匹配度阈值（0-100）
+  isActive: boolean("isActive").default(true),
+  lastNotificationSent: timestamp("lastNotificationSent"), // 最后一次发送通知的时间
+  notificationFrequency: mysqlEnum("notificationFrequency", ["daily", "weekly", "immediately"]).default("daily"), // 通知频率
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type JobSearchSubscription = typeof jobSearchSubscriptions.$inferSelect;
+export type InsertJobSearchSubscription = typeof jobSearchSubscriptions.$inferInsert;
