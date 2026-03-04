@@ -6,6 +6,8 @@ import { productsRouter } from "./routers/products";
 import { jobsRouter } from "./routers/jobs";
 import { subscriptionsRouter } from "./routers/subscriptions";
 import { adminRouter } from "./routers/admin";
+import { jobsRealRouter } from "./routers/jobs-real";
+import { propertiesRealRouter } from "./routers/properties-real";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -32,6 +34,10 @@ export const appRouter = router({
 
   // 管理员路由
   admin: adminRouter,
+
+  // 真实数据路由
+  jobsReal: jobsRealRouter,
+  propertiesReal: propertiesRealRouter,
 });
 
 export type AppRouter = typeof appRouter;
