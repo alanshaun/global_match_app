@@ -219,16 +219,25 @@ export async function handleJobProcessing(req: Request, res: Response) {
 
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 过滤半年内的职位，按匹配度排序，限制数量
-    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+    // 按匹配度排序，限制数量（移除时间限制，接受所有职位）
+    console.log(
+      `[Job Processing] Before filtering: ${jobsWithScores.length} jobs with scores`
+    );
+    
     const filteredJobs = jobsWithScores
-      .filter((job) => new Date(job.publishedDate) > sixMonthsAgo)
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, jobCount);
 
     console.log(
-      `[Job Processing] Returning ${filteredJobs.length} filtered jobs`
+      `[Job Processing] After filtering: ${filteredJobs.length} jobs returned`
     );
+    
+    // 如果没有职位，添加调试信息
+    if (filteredJobs.length === 0) {
+      console.warn(
+        `[Job Processing] WARNING: No jobs returned! Original count: ${jobsWithScores.length}`
+      );
+    }
 
     // 阶段 4: 完成
     sendProgress(res, "completed", 100, "职位搜索完成！", {

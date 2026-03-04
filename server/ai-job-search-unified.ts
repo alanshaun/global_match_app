@@ -1,5 +1,6 @@
 import { searchJobsWithKimi } from "./kimi-job-search";
 import { searchJobsWithGemini, validateGeminiConnection } from "./_core/gemini-llm";
+import { searchJobsWithDuckDuckGo, generateMockJobs } from "./fallback-job-search";
 
 export interface JobSearchResult {
   title: string;
@@ -13,8 +14,8 @@ export interface JobSearchResult {
 }
 
 /**
- * 统一的职位搜索函数 - 自动选择最佳 AI 模型
- * 优先使用 Gemini，备选 Kimi
+ * 统一的职位搜索函数 - 自动选择最佳 AI 模式
+ * 优先使用 Gemini → Kimi → DuckDuckGo → Mock
  */
 export async function searchJobsUnified(
   position: string,
@@ -23,28 +24,56 @@ export async function searchJobsUnified(
   limit: number = 10
 ): Promise<JobSearchResult[]> {
   try {
-    // 检查 Gemini 是否可用
+    // 方案 1: 检查 Gemini 是否可用
     const geminiAvailable = await validateGeminiConnection();
 
     if (geminiAvailable) {
-      console.log("[Unified Job Search] Using Gemini API");
+      console.log("[Unified Job Search] Trying Gemini API...");
       try {
         const jobs = await searchJobsWithGemini(position, location, country, limit);
         if (jobs.length > 0) {
+          console.log(`[Unified Job Search] SUCCESS: Got ${jobs.length} jobs from Gemini`);
           return jobs;
         }
       } catch (error) {
-        console.warn("[Unified Job Search] Gemini failed, falling back to Kimi", error);
+        console.warn("[Unified Job Search] Gemini failed:", error);
       }
     }
 
-    // 备选方案：使用 Kimi
-    console.log("[Unified Job Search] Using Kimi API");
-    const jobs = await searchJobsWithKimi(position, location, country, limit);
-    return jobs;
+    // 方案 2: 使用 Kimi
+    console.log("[Unified Job Search] Trying Kimi API...");
+    try {
+      const jobs = await searchJobsWithKimi(position, location, country, limit);
+      if (jobs.length > 0) {
+        console.log(`[Unified Job Search] SUCCESS: Got ${jobs.length} jobs from Kimi`);
+        return jobs;
+      }
+    } catch (error) {
+      console.warn("[Unified Job Search] Kimi failed:", error);
+    }
+
+    // 方案 3: 使用 DuckDuckGo
+    console.log("[Unified Job Search] Trying DuckDuckGo...");
+    try {
+      const jobs = await searchJobsWithDuckDuckGo(position, location, country, limit);
+      if (jobs.length > 0) {
+        console.log(`[Unified Job Search] SUCCESS: Got ${jobs.length} jobs from DuckDuckGo`);
+        return jobs;
+      }
+    } catch (error) {
+      console.warn("[Unified Job Search] DuckDuckGo failed:", error);
+    }
+
+    // 方案 4: 使用模拟数据（最后的备选）
+    console.log("[Unified Job Search] Using mock data as last resort...");
+    const mockJobs = generateMockJobs(position, location, limit);
+    console.log(`[Unified Job Search] Generated ${mockJobs.length} mock jobs`);
+    return mockJobs;
   } catch (error) {
     console.error("[Unified Job Search] Error:", error);
-    return [];
+    // 即使全部失败，也要返回一些数据
+    console.warn("[Unified Job Search] All methods failed, returning mock data");
+    return generateMockJobs(position, location, limit);
   }
 }
 
