@@ -324,25 +324,25 @@ async function searchJobsFromMultiplePlatforms(
   searchKeywords: any
 ): Promise<any[]> {
   try {
-    // 使用 AI 驱动的职位搜索
-    const { searchJobsWithAI } = await import("../ai-job-search");
+    // 使用 Kimi AI 搜索真实职位
+    const { searchJobsWithKimi } = await import("../kimi-job-search");
 
     // 确定国家代码
     const countryCode = country?.toUpperCase() === "CN" ? "CN" : "US";
 
-    // 使用 AI 搜索真实职位
-    console.log(`[AI Job Search] Searching for ${position} in ${city}, ${country}`);
-    const aiJobs = await searchJobsWithAI(
+    // 使用 Kimi AI 搜索职位
+    console.log(`[Kimi Job Search] Searching for ${position} in ${city}, ${country}`);
+    const kimiJobs = await searchJobsWithKimi(
       position,
       city,
       countryCode,
       20 // 获取 20 个职位
     );
 
-    console.log(`[AI Job Search] Found ${aiJobs.length} jobs`);
+    console.log(`[Kimi Job Search] Found ${kimiJobs.length} jobs`);
 
-    // 转换 AI 数据格式
-    return aiJobs.map((job: any) => ({
+    // 转换数据格式
+    return kimiJobs.map((job: any) => ({
       title: job.title,
       company: job.company,
       location: `${city}, ${country}`,
@@ -353,7 +353,7 @@ async function searchJobsFromMultiplePlatforms(
       salaryMin: extractSalaryMin(job.salary),
       salaryMax: extractSalaryMax(job.salary),
       salaryCurrency: country?.toUpperCase() === "CN" ? "CNY" : "USD",
-      url: job.url, // 真实链接（来自 AI 搜索）
+      url: job.url, // 真实链接（来自 Kimi AI 搜索）
       source: job.source,
       publishedDate: job.postedDate ? new Date(job.postedDate) : new Date(),
       companyWebsite: extractWebsite(job.company),
