@@ -59,6 +59,7 @@ export default function Jobs() {
     salaryMin: undefined as number | undefined,
     salaryMax: undefined as number | undefined,
     salaryCurrency: "USD",
+    jobCount: 10 as number,
   });
 
   // API 调用
@@ -139,6 +140,7 @@ export default function Jobs() {
       params.append("salaryMax", formData.salaryMax.toString());
     }
     params.append("salaryCurrency", formData.salaryCurrency);
+    params.append("jobCount", formData.jobCount.toString());
 
     const eventSource = new EventSource(
       `/api/process-jobs/${id}?${params.toString()}`
@@ -362,6 +364,32 @@ export default function Jobs() {
                     <option value="CNY">CNY</option>
                   </select>
                 </div>
+              </div>
+
+              {/* 职位数量选择 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  期望职位数量
+                </label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="1"
+                    max="50"
+                    value={formData.jobCount}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        jobCount: parseInt(e.target.value),
+                      })
+                    }
+                    className="flex-1"
+                  />
+                  <span className="text-lg font-semibold text-green-600 min-w-[60px] text-right">
+                    {formData.jobCount}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">选择要搜索的职位数量(1-50)</p>
               </div>
 
               {/* 提交按钮 */}

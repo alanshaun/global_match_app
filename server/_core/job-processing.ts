@@ -163,6 +163,7 @@ export async function handleJobProcessing(req: Request, res: Response) {
   const salaryMin = req.query.salaryMin ? parseInt(req.query.salaryMin as string) : 50000;
   const salaryMax = req.query.salaryMax ? parseInt(req.query.salaryMax as string) : 200000;
   const salaryCurrency = (req.query.salaryCurrency as string) || "USD";
+  const jobCount = req.query.jobCount ? parseInt(req.query.jobCount as string) : 10;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -190,14 +191,16 @@ export async function handleJobProcessing(req: Request, res: Response) {
       null
     );
 
-    // 生成职位数据（不使用 AI，直接使用默认生成器以确保稳定性）
-    const jobs = generateDefaultJobs(
+    // 生成职位数据（根据用户指定的数量）
+    const allJobs = generateDefaultJobs(
       targetPosition,
       targetCity,
       salaryMin,
       salaryMax,
       salaryCurrency
     );
+    // 只返回用户指定数量的职位
+    const jobs = allJobs.slice(0, Math.min(jobCount, allJobs.length));
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
 
@@ -218,11 +221,12 @@ export async function handleJobProcessing(req: Request, res: Response) {
 
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // 过滤半年内的职位，按匹配度排序
+    // 过滤半年内的职位，按匹配度排序，限制数量
     const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
     const filteredJobs = jobsWithScores
       .filter((job) => new Date(job.publishedDate) > sixMonthsAgo)
-      .sort((a, b) => b.matchScore - a.matchScore);
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, jobCount);
 
     // 阶段 4: 完成
     sendProgress(
