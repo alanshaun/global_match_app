@@ -79,10 +79,15 @@ export const jobsRouterV2 = router({
         }
 
         const matches = await getJobMatchesByResumeId(input.resumeId);
+        const sorted = matches.sort((a: any, b: any) => {
+          const scoreA = a.matchScore || 0;
+          const scoreB = b.matchScore || 0;
+          return scoreB - scoreA;
+        });
 
         return {
           resume,
-          matches: matches.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)),
+          matches: sorted,
         };
       } catch (error) {
         throw new Error(`Failed to get job matches: ${error}`);
