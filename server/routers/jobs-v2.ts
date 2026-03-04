@@ -9,7 +9,7 @@ import {
 } from "../db";
 import { storagePut } from "../storage";
 import { analyzeResumeDeep, calculateResumeScore } from "../resume-deep-analysis";
-import { aggregateJobsFromMultipleSources } from "../job-aggregator-multi-source";
+import { aggregateJobsFromExtendedSources } from "../job-aggregator-extended";
 import { calculateBatchJobMatches } from "../job-matching-engine";
 
 /**
@@ -136,7 +136,7 @@ async function parseResumeAndSearchJobsV2(
 
     // 从多个源聚合职位数据
     console.log(`[Job Search V2] Aggregating jobs from multiple sources...`);
-    const jobs = await aggregateJobsFromMultipleSources(
+    const jobs = await aggregateJobsFromExtendedSources(
       input.targetPosition,
       input.targetCity,
       "entry-level"
@@ -151,21 +151,15 @@ async function parseResumeAndSearchJobsV2(
 
     // 保存匹配结果
     for (const match of matchedJobs) {
-      await createJobMatch(resumeId, {
+      await createJobMatch({
+        resumeUploadId: resumeId,
         jobTitle: match.title,
-        company: match.company,
-        location: match.location,
+        companyName: match.company,
+        jobLocation: match.location,
         jobUrl: match.sourceUrl,
-        matchScore: match.matchScore.overallScore,
-        skillsMatch: match.matchScore.skillsMatch,
-        experienceMatch: match.matchScore.experienceMatch,
-        schoolMatch: match.matchScore.schoolMatch,
-        companyStageMatch: match.matchScore.companyStageMatch,
-        matchDetails: match.matchScore.details,
-        strengths: match.matchScore.strengths.join(", "),
-        gaps: match.matchScore.gaps.join(", "),
-        source: match.source,
-        postedDate: match.postedDate,
+        matchScore: String(match.matchScore.overallScore),
+        matchReason: match.matchScore.details,
+        jobSource: match.source as any,
       });
     }
 

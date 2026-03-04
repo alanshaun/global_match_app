@@ -1,6 +1,6 @@
 import { invokeLLM } from "./_core/llm";
 import { ResumeAnalysis } from "./resume-deep-analysis";
-import { JobListing } from "./job-aggregator-multi-source";
+import { JobListing } from "./job-aggregator-extended";
 
 export interface MatchScore {
   overallScore: number; // 总匹配度 0-100
