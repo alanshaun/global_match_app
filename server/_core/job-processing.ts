@@ -28,91 +28,20 @@ function sendProgress(
   message: string,
   data?: any
 ) {
-  const progressUpdate: JobSearchProgress = {
-    stage,
-    progress,
-    message,
-    data,
-  };
-  res.write(`data: ${JSON.stringify(progressUpdate)}\n\n`);
-}
-
-async function generateJobsWithAI(
-  targetPosition: string,
-  targetCity: string,
-  salaryMin: number,
-  salaryMax: number,
-  salaryCurrency: string
-): Promise<GeneratedJob[]> {
   try {
-    // 使用 Kimi AI 生成符合条件的职位列表
-    const prompt = `你是一个职位搜索助手。根据以下条件，生成 10 个真实风格的职位列表（JSON 格式）：
-
-岗位：${targetPosition}
-城市：${targetCity}
-薪资范围：${salaryMin} - ${salaryMax} ${salaryCurrency}
-
-要求：
-1. 职位名称必须与"${targetPosition}"相关或相似
-2. 工作地点必须在"${targetCity}"或附近城市
-3. 薪资范围应该接近用户输入的范围
-4. 公司名称应该是真实风格的公司（可以虚构但要逼真）
-5. 发布日期应该在最近 6 个月内
-6. 返回 JSON 数组格式，每个职位包含以下字段：
-   - title: 职位名称
-   - company: 公司名称
-   - location: 工作地点
-   - salary: 薪资范围（格式如 "100000-150000"）
-   - description: 职位描述（2-3 句话）
-   - publishedDate: 发布日期（ISO 格式）
-   - source: 来源（LinkedIn、Indeed、Boss 等）
-
-返回纯 JSON 数组，不要有其他文本。`;
-
-    const response = await invokeKimiLLM([
-      {
-        role: "system",
-        content: "你是一个职位搜索助手，返回有效的 JSON 数据。",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ]);
-
-    // 提取响应内容
-    const content =
-      response.choices?.[0]?.message?.content || "";
-
-    // 尝试解析 JSON
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.warn("Failed to extract JSON from AI response");
-      return generateDefaultJobs(targetPosition, targetCity, salaryMin, salaryMax, salaryCurrency);
-    }
-
-    const jobs = JSON.parse(jsonMatch[0]);
-
-    // 验证和转换数据
-    return jobs.map((job: any) => ({
-      title: job.title || targetPosition,
-      company: job.company || "Tech Company Inc",
-      location: job.location || targetCity,
-      salary: job.salary || `${salaryMin}-${salaryMax}`,
-      currency: salaryCurrency,
-      description: job.description || "Join our team",
-      publishedDate: new Date(job.publishedDate || Date.now()),
-      link: `https://example.com/job/${Math.random().toString(36).substr(2, 9)}`,
-      source: job.source || "LinkedIn",
-      matchScore: 0, // 稍后计算
-    }));
+    const progressUpdate: JobSearchProgress = {
+      stage,
+      progress,
+      message,
+      data,
+    };
+    res.write(`data: ${JSON.stringify(progressUpdate)}\n\n`);
   } catch (error) {
-    console.error("AI job generation error:", error);
-    // 如果 AI 失败，返回默认职位
-    return generateDefaultJobs(targetPosition, targetCity, salaryMin, salaryMax, salaryCurrency);
+    console.error("Error sending progress:", error);
   }
 }
 
+// 生成默认职位数据（不依赖 AI）
 function generateDefaultJobs(
   targetPosition: string,
   targetCity: string,
@@ -143,12 +72,12 @@ function generateDefaultJobs(
     "Tech Giants",
   ];
 
-  // 城市变体（同一地区的不同城市）
+  // 城市变体
   const cityVariants = [targetCity];
   if (targetCity.toLowerCase().includes("new york")) {
     cityVariants.push("New York, USA", "Brooklyn, USA");
   } else if (targetCity.toLowerCase().includes("san francisco")) {
-    cityVariants.push("San Francisco, USA", "Oakland, USA", "Palo Alto, USA");
+    cityVariants.push("San Francisco, USA", "Oakland, USA");
   } else if (targetCity.toLowerCase().includes("london")) {
     cityVariants.push("London, UK", "Greater London, UK");
   } else {
@@ -173,10 +102,10 @@ function generateDefaultJobs(
       description: `We are looking for a talented ${targetPosition} to join our growing team.`,
       publishedDate: new Date(
         Date.now() - Math.random() * 180 * 24 * 60 * 60 * 1000
-      ), // 随机 0-180 天前
+      ),
       link: `https://example.com/job/${Math.random().toString(36).substr(2, 9)}`,
       source: sources[i % sources.length],
-      matchScore: 0, // 稍后计算
+      matchScore: 0,
     });
   }
 
@@ -190,7 +119,7 @@ function calculateMatchScore(
   salaryMin: number,
   salaryMax: number
 ): number {
-  let score = 50; // 基础分数
+  let score = 50;
 
   // 职位名称匹配（最多 30 分）
   const titleLower = job.title.toLowerCase();
@@ -221,7 +150,6 @@ function calculateMatchScore(
   if (jobSalaryMin >= salaryMin && jobSalaryMax <= salaryMax) {
     score += 20;
   } else if (jobSalaryMin <= salaryMax && jobSalaryMax >= salaryMin) {
-    // 部分重叠
     score += 10;
   }
 
@@ -262,8 +190,8 @@ export async function handleJobProcessing(req: Request, res: Response) {
       null
     );
 
-    // 使用 AI 生成符合条件的职位
-    const jobs = await generateJobsWithAI(
+    // 生成职位数据（不使用 AI，直接使用默认生成器以确保稳定性）
+    const jobs = generateDefaultJobs(
       targetPosition,
       targetCity,
       salaryMin,
