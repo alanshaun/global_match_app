@@ -145,14 +145,39 @@ export default function Home() {
               }
             </p>
 
-            {/* 演示图片 */}
+            {/* 演示区域 - 简洁设计 */}
             <div className="relative w-full max-w-4xl mx-auto mb-16">
-              <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
-                <img
-                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663378994043/YX66aCBXWR7kw3XuoMDswL/demo-screenshot-7C3iiTBNahwomDruwDYQmj.webp"
-                  alt="SmartMatch Demo"
-                  className="w-full h-auto"
-                />
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-12">
+                <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {language === "en" ? "AI-Powered Matching" : "AI 驱动的匹配"}
+                  </h3>
+                  <p className="text-gray-600 text-center max-w-md">
+                    {language === "en"
+                      ? "Upload your information and let our AI find the best matches for you."
+                      : "上传您的信息，让我们的 AI 为您找到最佳匹配。"
+                    }
+                  </p>
+                  <div className="flex gap-4 mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600">{language === "en" ? "Fast" : "快速"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600">{language === "en" ? "Accurate" : "精准"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600">{language === "en" ? "Global" : "全球"}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -171,27 +196,7 @@ export default function Home() {
               </a>
             </div>
 
-            {/* 社交证明 - 统计数据 */}
-            <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-8">
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">5K+</div>
-                <p className="text-gray-600 text-sm md:text-base">
-                  {language === "en" ? "Active Users" : "活跃用户"}
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">50K+</div>
-                <p className="text-gray-600 text-sm md:text-base">
-                  {language === "en" ? "Matches Made" : "匹配成功"}
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">95%</div>
-                <p className="text-gray-600 text-sm md:text-base">
-                  {language === "en" ? "Success Rate" : "成功率"}
-                </p>
-              </div>
-            </div>
+
 
             {/* 用户评价 */}
             <div className="max-w-2xl mx-auto">
