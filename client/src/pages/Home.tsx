@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { SmartMatchLogo } from "@/components/SmartMatchLogo";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowRight, Globe } from "lucide-react";
+import { ArrowRight, Globe, Menu, X } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
@@ -11,6 +11,7 @@ export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const { language, setLanguage, t } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (loading) {
     return (
@@ -37,7 +38,7 @@ export default function Home() {
               </span>
             </div>
 
-            {/* 菜单项 */}
+            {/* 桌面菜单项 */}
             <div className="hidden md:flex items-center gap-8">
               <button
                 onClick={() => navigate("/products")}
@@ -66,22 +67,69 @@ export default function Home() {
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 transition"
               >
                 <Globe className="w-4 h-4" />
-                {language === "en" ? "中文" : "EN"}
+                <span className="hidden sm:inline">{language === "en" ? "中文" : "EN"}</span>
               </button>
-              <a href={getLoginUrl()}>
+              <a href={getLoginUrl()} className="hidden sm:block">
                 <Button className="bg-black hover:bg-gray-900 text-white border-0 rounded-full px-6 py-2 text-sm">
                   {language === "en" ? "Sign In" : "登录"}
                 </Button>
               </a>
+              {/* 汉堡菜单按钮 */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
+
+          {/* 移动端菜单 */}
+          {mobileMenuOpen && (
+            <div className="md:hidden bg-white border-t border-gray-200">
+              <div className="container mx-auto px-6 py-4 space-y-3">
+                <button
+                  onClick={() => {
+                    navigate("/products");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                >
+                  {language === "en" ? "Find Buyers" : "找买家"}
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/jobs");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                >
+                  {language === "en" ? "Find Jobs" : "找工作"}
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/properties");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                >
+                  {language === "en" ? "Real Estate" : "找房产"}
+                </button>
+                <a href={getLoginUrl()} className="block">
+                  <Button className="w-full bg-black hover:bg-gray-900 text-white border-0 rounded-lg py-2">
+                    {language === "en" ? "Sign In" : "登录"}
+                  </Button>
+                </a>
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Hero Section - 极简落地页 */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pt-20 pb-20">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-20">
           {/* 主标语 */}
           <div className="text-center max-w-5xl">
-            <h1 className="text-7xl md:text-8xl font-serif font-bold text-gray-900 mb-8 leading-tight tracking-tight">
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-gray-900 mb-8 leading-tight tracking-tight">
               {language === "en"
                 ? "Find your next opportunity"
                 : "发现您的下一个机会"
@@ -89,46 +137,26 @@ export default function Home() {
             </h1>
 
             {/* 副标题 */}
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 font-light leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-600 mb-16 font-light leading-relaxed">
               {language === "en"
                 ? "AI-powered matching to connect you with global buyers, jobs, and investment opportunities."
                 : "AI 驱动的匹配系统，连接您与全球买家、工作和投资机会。"
               }
             </p>
 
-            {/* 动态演示区 */}
-            <div className="relative w-full max-w-4xl mx-auto mb-12">
-              <div className="aspect-video rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: "#E8E3DB" }}>
-                {/* 动态演示区域 - 使用渐变和动画 */}
-                <div className="w-full h-full flex items-center justify-center relative">
-                  {/* 背景动画 */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                    <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-                    <div className="absolute -bottom-8 left-1/2 w-64 h-64 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-                  </div>
-
-                  {/* 演示内容 */}
-                  <div className="relative z-10 text-center">
-                    <div className="inline-block">
-                      <div className="text-6xl mb-4">✨</div>
-                      <p className="text-gray-700 font-medium text-lg">
-                        {language === "en" ? "AI-Powered Matching" : "AI 智能匹配"}
-                      </p>
-                      <p className="text-gray-500 text-sm mt-2">
-                        {language === "en"
-                          ? "Real-time analysis & global search"
-                          : "实时分析和全球搜索"
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* 演示图片 */}
+            <div className="relative w-full max-w-4xl mx-auto mb-16">
+              <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
+                <img
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663378994043/YX66aCBXWR7kw3XuoMDswL/demo-screenshot-7C3iiTBNahwomDruwDYQmj.webp"
+                  alt="SmartMatch Demo"
+                  className="w-full h-auto"
+                />
               </div>
             </div>
 
             {/* CTA 按钮 */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <button
                 onClick={() => navigate("/products")}
                 className="px-8 py-4 bg-black text-white rounded-full font-medium hover:bg-gray-900 transition text-lg"
@@ -140,6 +168,41 @@ export default function Home() {
                   {language === "en" ? "Learn More" : "了解更多"}
                 </button>
               </a>
+            </div>
+
+            {/* 社交证明 - 统计数据 */}
+            <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-8">
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">5K+</div>
+                <p className="text-gray-600 text-sm md:text-base">
+                  {language === "en" ? "Active Users" : "活跃用户"}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">50K+</div>
+                <p className="text-gray-600 text-sm md:text-base">
+                  {language === "en" ? "Matches Made" : "匹配成功"}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">95%</div>
+                <p className="text-gray-600 text-sm md:text-base">
+                  {language === "en" ? "Success Rate" : "成功率"}
+                </p>
+              </div>
+            </div>
+
+            {/* 用户评价 */}
+            <div className="max-w-2xl mx-auto">
+              <p className="text-gray-600 italic mb-3">
+                "{language === "en"
+                  ? "SmartMatch helped us find qualified buyers in just 2 weeks. Highly recommended!"
+                  : "SmartMatch 帮助我们在两周内找到了合格的买家。强烈推荐！"
+                }"
+              </p>
+              <p className="text-gray-500 text-sm">
+                {language === "en" ? "— Sarah Johnson, CEO at TechWave" : "— Sarah Johnson，TechWave CEO"}
+              </p>
             </div>
           </div>
         </div>
