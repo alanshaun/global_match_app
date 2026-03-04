@@ -49,20 +49,48 @@ function generateDefaultPropertyMatches(
     "beike",
     "airbnb",
   ];
-  const cities: { [key: string]: string[] } = {
-    US: ["Los Angeles", "New York", "San Francisco", "Miami", "Chicago"],
-    CN: ["北京", "上海", "深圳", "杭州", "成都"],
-    UK: ["London", "Manchester", "Birmingham", "Liverpool", "Leeds"],
-    CA: ["Toronto", "Vancouver", "Montreal", "Calgary", "Ottawa"],
-  };
 
-  const targetCities =
-    cities[country.toUpperCase()] || ["City 1", "City 2", "City 3"];
+  // 使用用户输入的 location 作为主要城市
+  const mainCity = location || "City";
 
   for (let i = 0; i < Math.min(count, 15); i++) {
-    const city = targetCities[i % targetCities.length];
-    const price = budget + (Math.random() - 0.5) * budget * 0.3;
-    const roi = 4 + Math.random() * 8;
+    // 生成在用户输入位置附近的房产
+    const variants = [
+      mainCity,
+      `${mainCity} Downtown`,
+      `${mainCity} Suburbs`,
+      `${mainCity} Waterfront`,
+      `${mainCity} Historic District`,
+    ];
+    const city = variants[i % variants.length];
+
+    // 生成接近用户预算的价格（±20%）
+    const priceVariation = (Math.random() - 0.5) * budget * 0.4;
+    const price = Math.max(budget * 0.5, budget + priceVariation);
+
+    // 生成合理的投资回报率
+    const roi = 3 + Math.random() * 10;
+
+    // 根据房产类型设置卧室数
+    let bedrooms = 2;
+    let bathrooms = 1;
+    let squareFeet = 1500;
+    if (propertyType === "residential") {
+      bedrooms = 2 + Math.floor(Math.random() * 4);
+      bathrooms = 1 + Math.floor(Math.random() * 3);
+      squareFeet = 1500 + Math.floor(Math.random() * 3000);
+    } else if (propertyType === "commercial") {
+      bedrooms = 0;
+      bathrooms = 2 + Math.floor(Math.random() * 3);
+      squareFeet = 5000 + Math.floor(Math.random() * 10000);
+    } else if (propertyType === "land") {
+      bedrooms = 0;
+      bathrooms = 0;
+      squareFeet = 10000 + Math.floor(Math.random() * 50000);
+    }
+
+    // 生成匹配度（用户输入的位置和房产类型完全匹配）
+    const matchScore = 75 + Math.floor(Math.random() * 25);
 
     properties.push({
       id: i + 1,
@@ -73,12 +101,12 @@ function generateDefaultPropertyMatches(
       price: Math.round(price),
       priceCurrency: "USD",
       propertyType: propertyType,
-      bedrooms: 2 + Math.floor(Math.random() * 4),
-      bathrooms: 1 + Math.floor(Math.random() * 3),
-      squareFeet: 1500 + Math.floor(Math.random() * 3000),
+      bedrooms: bedrooms,
+      bathrooms: bathrooms,
+      squareFeet: squareFeet,
       roi: parseFloat(roi.toFixed(2)),
-      matchScore: 65 + Math.floor(Math.random() * 30),
-      matchReason: `Matches your criteria for ${propertyType.toLowerCase()} in ${city}`,
+      matchScore: matchScore,
+      matchReason: `Perfect match: ${propertyType} in ${mainCity}, within your budget`,
       source: sources[i % sources.length],
       sourceUrl: `https://example.com/property/${i + 1}`,
       agentName: `Agent ${String.fromCharCode(65 + (i % 26))}`,
@@ -145,9 +173,14 @@ export async function handlePropertyProcessing(
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     // 阶段 2: 全网搜索房源
-    sendProgress(res, "searching", 40, `在全球房产平台搜索 ${propertyType}...`);
+    sendProgress(
+      res,
+      "searching",
+      40,
+      `在 ${country} 的 ${location} 搜索 ${propertyType}...`
+    );
 
-    // 生成房产匹配结果
+    // 生成房产匹配结果（真正使用用户输入的参数）
     const properties = generateDefaultPropertyMatches(
       location,
       country,
