@@ -149,3 +149,72 @@ export const jobMatches = mysqlTable("job_matches", {
 
 export type JobMatch = typeof jobMatches.$inferSelect;
 export type InsertJobMatch = typeof jobMatches.$inferInsert;
+
+/**
+ * 功能三：房产需求/房源上传表
+ * 存储用户上传的房产需求或房源信息
+ */
+export const propertySubmissions = mysqlTable("property_submissions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  submissionType: mysqlEnum("submissionType", ["buyer_demand", "seller_listing", "investor_opportunity"]).notNull(),
+  transactionType: mysqlEnum("transactionType", ["buy", "sell", "rent", "invest"]).notNull(),
+  description: text("description").notNull(), // 用户输入的需求/房源描述
+  images: json("images"), // JSON 数组存储房产图片 S3 URL
+  budget: int("budget"), // 预算（单位：美元）
+  budgetCurrency: varchar("budgetCurrency", { length: 10 }).default("USD"),
+  location: varchar("location", { length: 255 }), // 目标位置
+  country: varchar("country", { length: 100 }), // 目标国家
+  propertyType: mysqlEnum("propertyType", ["residential", "commercial", "land", "mixed"]),
+  bedrooms: int("bedrooms"),
+  bathrooms: int("bathrooms"),
+  squareFeet: int("squareFeet"),
+  expectedROI: decimal("expectedROI", { precision: 5, scale: 2 }), // 期望回报率（%）
+  dealbreakers: json("dealbreakers"), // JSON 数组存储 dealbreaker 条件
+  aiAnalysis: text("aiAnalysis"), // AI 分析结果（结构化标签）
+  aiTags: json("aiTags"), // JSON 数组存储 AI 提取的标签（海景、学区、高回报等）
+  matchProfile: json("matchProfile"), // 结构化匹配画像 JSON
+  status: mysqlEnum("status", ["pending", "analyzing", "completed", "failed"]).default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PropertySubmission = typeof propertySubmissions.$inferSelect;
+export type InsertPropertySubmission = typeof propertySubmissions.$inferInsert;
+
+/**
+ * 功能三：房产匹配结果表
+ * 存储搜索到的房源/买家信息和匹配度
+ */
+export const propertyMatches = mysqlTable("property_matches", {
+  id: int("id").autoincrement().primaryKey(),
+  propertySubmissionId: int("propertySubmissionId").notNull(),
+  matchType: mysqlEnum("matchType", ["property_listing", "buyer_profile", "investment_opportunity"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  location: varchar("location", { length: 255 }).notNull(),
+  country: varchar("country", { length: 100 }),
+  price: int("price"),
+  priceCurrency: varchar("priceCurrency", { length: 10 }).default("USD"),
+  propertyType: varchar("propertyType", { length: 100 }),
+  bedrooms: int("bedrooms"),
+  bathrooms: int("bathrooms"),
+  squareFeet: int("squareFeet"),
+  roi: decimal("roi", { precision: 5, scale: 2 }), // 回报率
+  matchScore: decimal("matchScore", { precision: 5, scale: 2 }), // 0-100 匹配度评分
+  matchReason: text("matchReason"),
+  source: mysqlEnum("source", ["zillow", "redfin", "realtor", "lianjia", "beike", "airbnb", "other"]).notNull(),
+  sourceUrl: varchar("sourceUrl", { length: 500 }).notNull(), // 房源链接
+  contactName: varchar("contactName", { length: 255 }),
+  contactEmail: varchar("contactEmail", { length: 255 }),
+  contactPhone: varchar("contactPhone", { length: 20 }),
+  agentName: varchar("agentName", { length: 255 }), // 房产经纪人名字
+  agentPhone: varchar("agentPhone", { length: 20 }),
+  agentEmail: varchar("agentEmail", { length: 255 }),
+  images: json("images"), // JSON 数组存储房产图片
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PropertyMatch = typeof propertyMatches.$inferSelect;
+export type InsertPropertyMatch = typeof propertyMatches.$inferInsert;

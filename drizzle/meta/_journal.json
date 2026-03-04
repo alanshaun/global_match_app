@@ -15,6 +15,13 @@
       "when": 1772541939585,
       "tag": "0001_fair_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772604092502,
+      "tag": "0002_steep_whirlwind",
+      "breakpoints": true
     }
   ]
 }

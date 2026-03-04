@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowRight, Briefcase, FileText } from "lucide-react";
+import { Loader2, ArrowRight, Briefcase, FileText, Home as HomeIcon } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
@@ -96,7 +96,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">选择功能</h2>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* 功能一 */}
             <Card 
               className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400"
@@ -175,6 +175,47 @@ export default function Home() {
                 </div>
                 <Button className="w-full bg-green-600 hover:bg-green-700">
                   开始搜索 <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* 功能三 */}
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-all hover:border-purple-400"
+              onClick={() => navigate("/properties")}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">房产投资匹配</CardTitle>
+                    <CardDescription className="mt-2">
+                      AI 智能匹配全球房产买家/卖家
+                    </CardDescription>
+                  </div>
+                  <HomeIcon className="w-8 h-8 text-purple-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+                    输入房产需求或房源信息
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+                    AI 分析房产特征和投资潜力
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+                    全网搜索 Zillow、链家等平台
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+                    获取真实房源链接和联系方式
+                  </div>
+                </div>
+                <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                  开始匹配 <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>

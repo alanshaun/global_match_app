@@ -10,6 +10,7 @@ import { serveStatic, setupVite } from "./vite";
 import { pdfUploadRouter } from "./pdf-upload";
 import { productProcessingRouter } from "./product-processing";
 import { handleJobProcessing } from "./job-processing";
+import { handlePropertyProcessing } from "./property-processing";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -44,6 +45,8 @@ async function startServer() {
   app.use("/api", productProcessingRouter);
   // Job processing endpoint (SSE)
   app.get("/api/process-jobs/:id", handleJobProcessing);
+  // Property processing endpoint (SSE)
+  app.get("/api/process-properties/:id", handlePropertyProcessing);
   // tRPC API
   app.use(
     "/api/trpc",
