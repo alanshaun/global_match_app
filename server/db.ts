@@ -8,12 +8,15 @@ import {
   coldEmails,
   resumeUploads,
   jobMatches,
+  emailSubscriptions,
   InsertProductSubmission,
   InsertCompanyMatch,
   InsertColdEmail,
   InsertResumeUpload,
   InsertJobMatch,
+  InsertEmailSubscription,
 } from "../drizzle/schema";
+import crypto from "crypto";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -244,6 +247,82 @@ export async function getJobMatchesByResumeId(resumeUploadId: number) {
       )
     )
     .orderBy(desc(jobMatches.matchScore));
+}
+
+/**
+ * Email subscription queries
+ */
+export async function getUserEmailSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db
+    .select()
+    .from(emailSubscriptions)
+    .where(eq(emailSubscriptions.userId, userId))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function createEmailSubscription(
+  userId: number,
+  email: string,
+  subscriptionType: "job_alerts" | "product_matches" | "property_updates" | "all" = "all"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const unsubscribeToken = crypto.randomBytes(32).toString("hex");
+  const result = await db.insert(emailSubscriptions).values({
+    userId,
+    email,
+    subscriptionType,
+    unsubscribeToken,
+  } as InsertEmailSubscription);
+  
+  return result;
+}
+
+export async function updateEmailSubscription(
+  userId: number,
+  subscriptionType: "job_alerts" | "product_matches" | "property_updates" | "all",
+  isActive: boolean
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(emailSubscriptions)
+    .set({
+      subscriptionType,
+      isActive,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailSubscriptions.userId, userId));
+}
+
+export async function unsubscribeByToken(token: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(emailSubscriptions)
+    .set({
+      isActive: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailSubscriptions.unsubscribeToken, token));
+}
+
+export async function getActiveSubscriptions() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db
+    .select()
+    .from(emailSubscriptions)
+    .where(eq(emailSubscriptions.isActive, true));
 }
 
 // TODO: add more feature queries here as your schema grows

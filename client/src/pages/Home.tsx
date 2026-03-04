@@ -6,6 +6,7 @@ import { ArrowRight, Globe, Menu, X } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
+import { EmailSubscriptionFooter } from "@/components/EmailSubscriptionFooter";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -206,6 +207,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Email Subscription Footer */}
+        <EmailSubscriptionFooter />
 
         {/* Footer - 简洁 */}
         <footer className="border-t border-gray-300 py-8 px-6">

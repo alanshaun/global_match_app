@@ -1,9 +1,10 @@
-import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { COOKIE_NAME } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { productsRouter } from "./routers/products";
 import { jobsRouter } from "./routers/jobs";
+import { subscriptionsRouter } from "./routers/subscriptions";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -24,6 +25,9 @@ export const appRouter = router({
 
   // 功能二：职位匹配路由
   jobs: jobsRouter,
+
+  // 邮件订阅路由
+  subscriptions: subscriptionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

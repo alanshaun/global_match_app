@@ -218,3 +218,21 @@ export const propertyMatches = mysqlTable("property_matches", {
 
 export type PropertyMatch = typeof propertyMatches.$inferSelect;
 export type InsertPropertyMatch = typeof propertyMatches.$inferInsert;
+
+/**
+ * Email Subscriptions Table
+ * Store user email subscription preferences (only for registered users)
+ */
+export const emailSubscriptions = mysqlTable("email_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  subscriptionType: mysqlEnum("subscriptionType", ["job_alerts", "product_matches", "property_updates", "all"]).default("all").notNull(),
+  isActive: boolean("isActive").default(true),
+  unsubscribeToken: varchar("unsubscribeToken", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EmailSubscription = typeof emailSubscriptions.$inferSelect;
+export type InsertEmailSubscription = typeof emailSubscriptions.$inferInsert;
