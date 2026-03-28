@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { initializeSSE, sendProgressUpdate } from "./progress-sse";
+import { searchBuyers, matchBuyersWithProduct } from "../buyer-search-engine";
 import { invokeKimiLLM, extractKimiContent } from "./kimi-llm";
 import {
   analyzeBuyerProfile,
@@ -369,8 +370,8 @@ Return ONLY valid JSON, no markdown or extra text:
         mockCompanies.push(...globalCompanies);
       }
 
-      for (let i = 0; i < mockCompanies.length; i++) {
-        const company = mockCompanies[i];
+      for (let i = 0; i < allCompanies.length; i++) {
+        const company = allCompanies[i];
 
         try {
           // 验证公司资质

@@ -1,5 +1,4 @@
 import { searchJobsWithKimi } from "./kimi-job-search";
-import { searchJobsWithGemini, validateGeminiConnection } from "./_core/gemini-llm";
 import { searchJobsWithDuckDuckGo, generateMockJobs } from "./fallback-job-search";
 
 export interface JobSearchResult {
@@ -15,7 +14,7 @@ export interface JobSearchResult {
 
 /**
  * 统一的职位搜索函数 - 自动选择最佳 AI 模式
- * 优先使用 Gemini → Kimi → DuckDuckGo → Mock
+ * 优先使用 Kimi → DuckDuckGo → Mock
  */
 export async function searchJobsUnified(
   position: string,
@@ -24,23 +23,7 @@ export async function searchJobsUnified(
   limit: number = 10
 ): Promise<JobSearchResult[]> {
   try {
-    // 方案 1: 检查 Gemini 是否可用
-    const geminiAvailable = await validateGeminiConnection();
-
-    if (geminiAvailable) {
-      console.log("[Unified Job Search] Trying Gemini API...");
-      try {
-        const jobs = await searchJobsWithGemini(position, location, country, limit);
-        if (jobs.length > 0) {
-          console.log(`[Unified Job Search] SUCCESS: Got ${jobs.length} jobs from Gemini`);
-          return jobs;
-        }
-      } catch (error) {
-        console.warn("[Unified Job Search] Gemini failed:", error);
-      }
-    }
-
-    // 方案 2: 使用 Kimi
+    // 方案 1: 使用 Kimi
     console.log("[Unified Job Search] Trying Kimi API...");
     try {
       const jobs = await searchJobsWithKimi(position, location, country, limit);
@@ -81,13 +64,12 @@ export async function searchJobsUnified(
  * 获取当前使用的 AI 模型信息
  */
 export async function getActiveAIModel(): Promise<{
-  model: "gemini" | "kimi";
+  model: "kimi";
   available: boolean;
 }> {
   try {
-    const geminiAvailable = await validateGeminiConnection();
-    return {
-      model: geminiAvailable ? "gemini" : "kimi",
+        return {
+      model: "kimi",
       available: true,
     };
   } catch (error) {
