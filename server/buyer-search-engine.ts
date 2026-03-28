@@ -30,7 +30,7 @@ interface BuyerCompany {
   country: string;
   city?: string;
   industry?: string;
-  source: 'serper' | 'google_places' | 'amap';
+  source: 'serper' | 'google_places' | 'amap' | 'kimi_ai';
   rating?: number;
   description?: string;
   coordinates?: {
@@ -113,7 +113,7 @@ async function searchWithSerper(query: BuyerSearchQuery): Promise<BuyerCompany[]
 }
 
 /**
- * 使用 Google Places 搜索买家信息
+ * 使用 Google Places API (New) 搜索买家信息
  */
 async function searchWithGooglePlaces(query: BuyerSearchQuery): Promise<BuyerCompany[]> {
   const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
@@ -125,15 +125,28 @@ async function searchWithGooglePlaces(query: BuyerSearchQuery): Promise<BuyerCom
   const results: BuyerCompany[] = [];
 
   try {
-    // 对于非中国国家，使用 Google Places
+    // 对于非中国国家，使用 Google Places API (New)
     const nonChinaCountries = query.targetCountries.filter(c => c.toLowerCase() !== 'china');
 
     for (const country of nonChinaCountries.slice(0, 2)) {
       try {
         const searchQuery = `${query.productCategory} distributor importer ${country}`;
 
+        // 使用新的 Places API searchText 端点
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${GOOGLE_PLACES_API_KEY}`
+          'https://places.googleapis.com/v1/places:searchText',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY
+            },
+            body: JSON.stringify({
+              textQuery: searchQuery,
+              maxResultCount: 10,
+              languageCode: 'en'
+            })
+          }
         );
 
         if (!response.ok) {
@@ -143,18 +156,18 @@ async function searchWithGooglePlaces(query: BuyerSearchQuery): Promise<BuyerCom
 
         const data = await response.json();
 
-        if (data.results && Array.isArray(data.results)) {
-          for (const place of data.results.slice(0, 5)) {
+        if (data.places && Array.isArray(data.places)) {
+          for (const place of data.places.slice(0, 5)) {
             const company: BuyerCompany = {
-              name: place.name,
-              address: place.formatted_address,
-              phone: place.formatted_phone_number,
+              name: place.displayName?.text || 'Unknown',
+              address: place.formattedAddress,
+              phone: place.internationalPhoneNumber,
               country: country,
               rating: place.rating,
-              coordinates: place.geometry?.location,
+              coordinates: place.location,
               source: 'google_places',
-              website: place.website,
-              description: place.types?.join(', ')
+              website: place.websiteUri,
+              description: place.types?.slice(0, 3).join(', ')
             };
 
             // 避免重复
@@ -171,6 +184,62 @@ async function searchWithGooglePlaces(query: BuyerSearchQuery): Promise<BuyerCom
     console.error(`❌ Google Places 集成错误: ${error}`);
   }
 
+  return results;
+}
+
+/**
+ * 使用 Kimi AI 联网搜索买家信息
+ */
+async function searchWithKimiAI(query: BuyerSearchQuery): Promise<BuyerCompany[]> {
+  const results: BuyerCompany[] = [];
+  
+  try {
+    const searchQuery = `找一些是 ${query.productCategory} 的分销商、进口商、批发商。
+    上源国家: ${query.targetCountries.join(', ')}
+    返回一个 JSON 数组，每个元素包含: name, country, website, phone, description`;
+    
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: '你是一个业务数据搜索专家。使用你的联网能力搜索真实的公司信息。返回的数据必须是有效的 JSON 数组。'
+        },
+        {
+          role: 'user',
+          content: searchQuery
+        }
+      ]
+    });
+    
+    const content = typeof response.choices?.[0]?.message?.content === 'string' 
+      ? response.choices[0].message.content 
+      : '';
+    
+    // 从哦应中提取 JSON
+    const jsonMatch = content.match(/\[\s*\{[\s\S]*?\}\s*\]/)
+    if (jsonMatch) {
+      const companies = JSON.parse(jsonMatch[0]);
+      
+      for (const company of companies) {
+        const buyerCompany: BuyerCompany = {
+          name: company.name || 'Unknown',
+          website: company.website,
+          phone: company.phone,
+          country: company.country || 'Unknown',
+          description: company.description,
+          source: 'kimi_ai'
+        };
+        
+        // 避免重复
+        if (!results.some(c => c.name === buyerCompany.name && c.country === buyerCompany.country)) {
+          results.push(buyerCompany);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Kimi AI 搜索错误: ${error}`);
+  }
+  
   return results;
 }
 
@@ -359,11 +428,30 @@ export async function searchBuyers(query: BuyerSearchQuery): Promise<BuyerCompan
   console.log(`   ✅ 获取 ${amapResults.length} 个结果`);
 
   // 4. 去重
-  const uniqueResults = Array.from(
+  let uniqueResults = Array.from(
     new Map(allResults.map(c => [c.name + c.country, c])).values()
   );
 
   console.log(`📊 总共获取 ${uniqueResults.length} 个唯一买家`);
+
+  // 5. 如果数据不足，使用 Kimi AI 联网搜索补充
+  if (uniqueResults.length < 10) {
+    console.log(`⚠️ 数据不足 (${uniqueResults.length}/10)，使用 Kimi AI 联网搜索补充...`);
+    try {
+      const kimiResults = await searchWithKimiAI(query);
+      console.log(`   ✅ Kimi AI 获取 ${kimiResults.length} 个结果`);
+      
+      // 合并结果
+      allResults.push(...kimiResults);
+      uniqueResults = Array.from(
+        new Map(allResults.map(c => [c.name + c.country, c])).values()
+      );
+      
+      console.log(`📊 补充后总计 ${uniqueResults.length} 个买家`);
+    } catch (error) {
+      console.error(`❌ Kimi AI 补充失败: ${error}`);
+    }
+  }
 
   return uniqueResults;
 }
