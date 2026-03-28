@@ -83,9 +83,9 @@ async function searchWithSerper(query: BuyerSearchQuery): Promise<BuyerCompany[]
         const data = await response.json();
 
         // Serper 返回的是 'organic' 字段，不是 'searchResults'
-        const results = data.organic || data.searchResults || [];
-        if (Array.isArray(results)) {
-          for (const result of results.slice(0, 5)) {
+        const searchResults = data.organic || data.searchResults || [];
+        if (Array.isArray(searchResults)) {
+          for (const result of searchResults.slice(0, 5)) {
             // 从搜索结果中提取公司信息
             const company: BuyerCompany = {
               name: result.title || 'Unknown',
