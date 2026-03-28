@@ -1,0 +1,9 @@
+{
+  "query": "\n-- 修改 product_submissions 表的 aiAnalysis 字段为 LONGTEXT\nALTER TABLE `product_submissions` MODIFY COLUMN `aiAnalysis` LONGTEXT;\n\n-- 修改 company_matches 表的 contactSource 字段为 VARCHAR\nALTER TABLE `company_matches` MODIFY COLUMN `contactSource` VARCHAR(100) DEFAULT 'official_website';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3YQj7uLkGu4EnQU.eaf51ee7d28b --database YX66aCBXWR7kw3XuoMDswL --execute \n-- 修改 product_submissions 表的 aiAnalysis 字段为 LONGTEXT\nALTER TABLE `product_submissions` MODIFY COLUMN `aiAnalysis` LONGTEXT;\n\n-- 修改 company_matches 表的 contactSource 字段为 VARCHAR\nALTER TABLE `company_matches` MODIFY COLUMN `contactSource` VARCHAR(100) DEFAULT 'official_website';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1275
+}

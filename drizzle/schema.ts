@@ -1,4 +1,4 @@
-import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean } from "drizzle-orm/mysql-core";
+import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, longtext } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -39,7 +39,7 @@ export const productSubmissions = mysqlTable("product_submissions", {
   productImages: json("productImages"), // JSON 数组存储图片 S3 URL
   targetCountries: json("targetCountries"), // JSON 数组存储目标国家
   numberOfCompanies: int("numberOfCompanies").default(10), // 用户要求的公司数量
-  aiAnalysis: text("aiAnalysis"), // AI 分析结果（产品特征、市场定位等）
+  aiAnalysis: longtext("aiAnalysis"), // AI 分析结果（产品特征、市场定位等）- 使用 longtext 支持更大数据
   status: mysqlEnum("status", ["pending", "analyzing", "completed", "failed"]).default("pending"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -65,7 +65,7 @@ export const companyMatches = mysqlTable("company_matches", {
   contactPhone: varchar("contactPhone", { length: 20 }),
   contactName: varchar("contactName", { length: 255 }),
   contactTitle: varchar("contactTitle", { length: 100 }),
-  contactSource: mysqlEnum("contactSource", ["official_website", "linkedin", "other"]).default("official_website"),
+  contactSource: varchar("contactSource", { length: 100 }).default("official_website"), // 存储数据源（serper, google_places, amap 等）
   coldEmailGenerated: boolean("coldEmailGenerated").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
