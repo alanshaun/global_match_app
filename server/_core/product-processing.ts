@@ -353,22 +353,65 @@ Return ONLY valid JSON, no markdown or extra text:
 
       let companiesWithContacts: any[] = [];
       
-      // 根据用户条件生成公司列表
-      const mockCompanies = generateCompaniesForCountries(
-        targetCountries,
-        numberOfCompanies
-      );
+      // 使用新的买家搜索引擎获取真实数据源
+      sendProgressUpdate(res, {
+        stage: "company_matching",
+        progress: 60,
+        message: "正在从真实数据源搜索买家...",
+      });
 
-      if (mockCompanies.length === 0) {
+      let realBuyers: any[] = [];
+      try {
+        realBuyers = await searchBuyers({
+          productName: productData.productName,
+          productCategory: productData.productCategory,
+          targetCountries: targetCountries,
+          buyerTypes: buyerProfile.buyerTypes,
+          keywords: productData.keywords || []
+        });
+        
+        console.log(`✅ 从真实数据源获取 ${realBuyers.length} 个买家`);
+        
         sendProgressUpdate(res, {
           stage: "company_matching",
-          progress: 75,
-          message: `⚠ 未找到符合条件的公司 (国家: ${targetCountries.join(", ")})，使用全球公司...`,
+          progress: 70,
+          message: `✓ 获取 ${realBuyers.length} 个买家，正在进行匹配...`,
         });
-        // 如果没有找到符合条件的公司，使用全球公司
-        const globalCompanies = generateCompaniesForCountries([], numberOfCompanies);
-        mockCompanies.push(...globalCompanies);
+      } catch (searchError) {
+        console.error("❌ 买家搜索错误:", searchError);
+        sendProgressUpdate(res, {
+          stage: "company_matching",
+          progress: 65,
+          message: "⚠ 搜索真实数据源失败，使用备用数据...",
+        });
       }
+
+      // 如果真实数据源返回结果不足，补充模拟数据
+      let mockCompanies: any[] = [];
+      if (realBuyers.length < numberOfCompanies / 2) {
+        mockCompanies = generateCompaniesForCountries(
+          targetCountries,
+          Math.ceil(numberOfCompanies / 2)
+        );
+      }
+
+      // 合并真实数据和模拟数据
+      const allCompanies = [
+        ...realBuyers.map(b => ({
+          name: b.name,
+          website: b.website,
+          linkedin: b.website,
+          description: b.description,
+          employees: 100,
+          industry: b.industry || "Distribution",
+          country: b.country,
+          city: b.city,
+          phone: b.phone,
+          address: b.address,
+          source: b.source
+        })),
+        ...mockCompanies
+      ].slice(0, numberOfCompanies);
 
       for (let i = 0; i < allCompanies.length; i++) {
         const company = allCompanies[i];
