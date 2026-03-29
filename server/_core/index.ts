@@ -11,6 +11,7 @@ import { pdfUploadRouter } from "./pdf-upload";
 import { productProcessingRouter } from "./product-processing";
 import { handleJobProcessing } from "./job-processing";
 import { handlePropertyProcessing } from "./property-processing";
+import { buyerChatRouter } from "./buyer-chat-sse";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,6 +48,8 @@ async function startServer() {
   app.get("/api/process-jobs/:id", handleJobProcessing);
   // Property processing endpoint (SSE)
   app.get("/api/process-properties/:id", handlePropertyProcessing);
+  // Buyer chat search endpoint (SSE)
+  app.use("/api", buyerChatRouter);
   // tRPC API
   app.use(
     "/api/trpc",

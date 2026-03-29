@@ -8,9 +8,30 @@ export type TrpcContext = {
   user: User | null;
 };
 
+const DEV_MOCK_USER: User = {
+  id: 1,
+  openId: "dev-user",
+  name: "Dev User",
+  email: "dev@localhost",
+  loginMethod: "dev",
+  role: "admin",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  lastSignedIn: new Date(),
+};
+
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
+  // Dev bypass: skip auth in development mode
+  if (process.env.NODE_ENV === "development") {
+    return {
+      req: opts.req,
+      res: opts.res,
+      user: DEV_MOCK_USER,
+    };
+  }
+
   let user: User | null = null;
 
   try {
